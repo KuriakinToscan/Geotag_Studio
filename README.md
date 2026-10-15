@@ -169,6 +169,7 @@ Três presets profissionais estão disponíveis com um clique:
   - Lotes que ultrapassariam 2 GB são divididos em vários arquivos (`geotag_batch_[timestamp]_parte1.zip`, `_parte2.zip`, ...). O navegador pode pedir permissão para baixar vários arquivos.
   - As subpastas de origem são preservadas dentro do ZIP e nomes repetidos recebem sufixo numérico (`geotag_DJI_0001_2.JPG`), sem sobrescrever arquivos.
   - Fotos que não puderem ser processadas são ignoradas sem interromper o lote e informadas ao final.
+- **Destino do Lote (Chrome e Edge):** Além do ZIP, é possível gravar as fotos diretamente em uma pasta escolhida. Cada JPEG vai para o disco assim que é gerado, sem ZIP e sem acumular dados no navegador, o que é o mais indicado para lotes grandes. As subpastas de origem são recriadas e arquivos já existentes na pasta nunca são sobrescritos (a nova foto recebe sufixo `_2`, `_3`...). Em navegadores sem suporte a essa função, a opção não aparece.
 - **Preservar metadados originais (EXIF/GPS/XMP):** Ativado por padrão. Copia os blocos EXIF e XMP da foto original para o JPEG exportado. A tag `Orientation` é ajustada para 1 (a rotação já está aplicada nos pixels) e a miniatura EXIF antiga, sem a estampa, deixa de ser referenciada.
 - **Cancelar Processamento:** Permite interromper o processamento em lote a qualquer momento de forma segura.
 

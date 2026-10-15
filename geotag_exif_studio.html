@@ -1342,6 +1342,15 @@
                     </div>
                 </div>
 
+                <!-- Destino do lote: ZIP (todos os navegadores) ou gravação direta em pasta (Chrome/Edge) -->
+                <div class="form-group" id="batch-output-group" style="display:none;">
+                    <label class="form-label" for="batch-output">Destino do Lote</label>
+                    <select id="batch-output" class="form-control">
+                        <option value="zip" selected>Baixar arquivo ZIP</option>
+                        <option value="folder">Gravar direto em uma pasta (sem ZIP)</option>
+                    </select>
+                </div>
+
                 <!-- Cópia dos metadados originais (EXIF/GPS e XMP) para os JPEGs exportados -->
                 <label class="checkbox-label" title="Copia GPS, data, câmera e dados DJI da foto original para o arquivo exportado">
                     <input id="preserve-metadata-check" type="checkbox" checked>
@@ -1353,7 +1362,7 @@
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                     </svg>
-                    <span>Processar e Baixar Todas (ZIP)</span>
+                    <span id="process-batch-label">Processar e Baixar Todas (ZIP)</span>
                 </button>
 
                 <!-- Botão para Baixar Apenas a Imagem Atual Visualizada -->
@@ -1574,6 +1583,9 @@
             // Botões de Ação e Lote
             const processBatchBtn = document.getElementById('process-batch-btn');
             const preserveMetadataCheck = document.getElementById('preserve-metadata-check');
+            const batchOutputGroup = document.getElementById('batch-output-group');
+            const batchOutputSelect = document.getElementById('batch-output');
+            const processBatchLabel = document.getElementById('process-batch-label');
             const downloadCurrentBtn = document.getElementById('download-current-btn');
             const cancelBatchBtn = document.getElementById('cancel-batch-btn');
             const batchProgressBox = document.getElementById('batch-progress-box');
@@ -3364,6 +3376,87 @@
             }
 
             /**
+             * Separa um nome de arquivo em base e extensão (ex: 'foto.JPG' → 'foto' e '.JPG').
+             * @param {string} name Nome do arquivo
+             * @returns {{base: string, ext: string}}
+             */
+            function splitFileName(name) {
+                const dot = name.lastIndexOf('.');
+                return dot > 0 ? { base: name.slice(0, dot), ext: name.slice(dot) } : { base: name, ext: '' };
+            }
+
+            /**
+             * Destino do lote gravando cada foto diretamente em uma pasta escolhida pelo usuário
+             * (File System Access API, disponível no Chrome e no Edge). Nada fica acumulado na
+             * memória: cada JPEG é gravado no disco assim que é gerado. As subpastas de origem são
+             * recriadas e arquivos já existentes na pasta nunca são sobrescritos.
+             */
+            class FolderBatchOutput {
+                /** @param {FileSystemDirectoryHandle} root Pasta de destino */
+                constructor(root) {
+                    this.root = root;
+                    this.dirs = new Map();
+                    this.usedNames = new Set();
+                }
+
+                /** Obtém (criando se preciso) a subpasta indicada por um caminho relativo */
+                async getDir(dirPath) {
+                    if (!dirPath) return this.root;
+                    if (this.dirs.has(dirPath)) return this.dirs.get(dirPath);
+                    let dir = this.root;
+                    for (const part of dirPath.split('/').filter(Boolean)) {
+                        dir = await dir.getDirectoryHandle(part, { create: true });
+                    }
+                    this.dirs.set(dirPath, dir);
+                    return dir;
+                }
+
+                /** Indica se já existe um arquivo ou pasta com o nome informado */
+                async exists(dir, name) {
+                    try {
+                        await dir.getFileHandle(name);
+                        return true;
+                    } catch (e) {
+                        if (e.name === 'NotFoundError') return false;
+                        if (e.name === 'TypeMismatchError') return true; // Existe uma pasta com esse nome
+                        throw e;
+                    }
+                }
+
+                async add(file, blob) {
+                    const rel = uniqueZipPath(file, this.usedNames);
+                    const slash = rel.lastIndexOf('/');
+                    const dir = await this.getDir(slash >= 0 ? rel.slice(0, slash) : '');
+                    const { base, ext } = splitFileName(rel.slice(slash + 1));
+
+                    let name = base + ext;
+                    for (let n = 2; await this.exists(dir, name); n++) name = base + '_' + n + ext;
+
+                    const handle = await dir.getFileHandle(name, { create: true });
+                    const writable = await handle.createWritable();
+                    try {
+                        await writable.write(blob);
+                    } finally {
+                        await writable.close();
+                    }
+                }
+
+                async finish() {
+                    return 'Pasta "' + this.root.name + '"';
+                }
+            }
+
+            /** Indica se o navegador permite gravar diretamente em uma pasta escolhida */
+            const canWriteToFolder = typeof window.showDirectoryPicker === 'function' && window.isSecureContext;
+            if (canWriteToFolder) batchOutputGroup.style.display = '';
+
+            batchOutputSelect.addEventListener('change', () => {
+                processBatchLabel.textContent = batchOutputSelect.value === 'folder'
+                    ? 'Processar e Salvar na Pasta'
+                    : 'Processar e Baixar Todas (ZIP)';
+            });
+
+            /**
              * Gera o caminho do arquivo dentro do ZIP, preservando a subpasta de origem e
              * acrescentando sufixo numérico quando o nome já foi usado no pacote.
              *
@@ -3442,6 +3535,21 @@
             processBatchBtn.addEventListener('click', async () => {
                 if (batchFiles.length === 0 || isBatchRunning) return;
 
+                // A pasta de destino precisa ser escolhida ainda dentro do clique do usuário
+                let output;
+                if (canWriteToFolder && batchOutputSelect.value === 'folder') {
+                    try {
+                        const dir = await window.showDirectoryPicker({ id: 'geotag-output', mode: 'readwrite' });
+                        output = new FolderBatchOutput(dir);
+                    } catch (e) {
+                        if (e.name !== 'AbortError') showToast("Não foi possível acessar a pasta: " + e.message, 6000);
+                        return;
+                    }
+                    if (isBatchRunning || batchFiles.length === 0) return;
+                } else {
+                    output = new ZipBatchOutput();
+                }
+
                 shouldCancelBatch = false;
                 setBatchRunningUI(true);
 
@@ -3451,7 +3559,6 @@
                 let completed = 0;
 
                 try {
-                    const output = new ZipBatchOutput();
                     const tempCanvas = document.createElement('canvas');
 
                     for (let i = 0; i < total; i++) {
@@ -3484,7 +3591,9 @@
                     tempCanvas.height = 0;
 
                     if (shouldCancelBatch) {
-                        showToast("Processamento em lote interrompido pelo usuário.");
+                        showToast("Processamento em lote interrompido pelo usuário." +
+                            (output instanceof FolderBatchOutput && completed > 0
+                                ? ' ' + completed + ' foto(s) já gravada(s) na pasta.' : ''), 6000);
                     } else if (completed === 0) {
                         showToast("Nenhuma imagem pôde ser processada.");
                     } else {
