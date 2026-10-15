@@ -1358,11 +1358,11 @@
             
             <!-- Barra de Ferramentas de Zoom & Pan -->
             <div class="viewport-toolbar">
-                <button id="zoom-out" class="toolbar-btn" title="Diminuir Zoom (Ctrl + Scroll)">
+                <button id="zoom-out" class="toolbar-btn" title="Diminuir Zoom (ou role a roda do mouse)">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
                 <span id="zoom-level" style="font-size:10px; font-weight:600; color:#cbd5e1; min-width:38px; text-align:center;">100%</span>
-                <button id="zoom-in" class="toolbar-btn" title="Aumentar Zoom (Ctrl + Scroll)">
+                <button id="zoom-in" class="toolbar-btn" title="Aumentar Zoom (ou role a roda do mouse)">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
                 <div class="toolbar-sep"></div>
@@ -2311,8 +2311,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                     const img = new Image();
                     img.onload = function() {
                         logoImage = img;
-                        if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
+                        document.getElementById('logo-label').textContent = 'Logotipo: ' + file.name;
+                        refreshPreview();
                         showToast("Logotipo carregado com sucesso.");
+                    };
+                    img.onerror = function() {
+                        showToast("Não foi possível abrir o arquivo do logotipo.");
                     };
                     img.src = event.target.result;
                 };
@@ -2323,7 +2327,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 logoImage = null;
                 logoUpload.value = '';
                 document.getElementById('logo-label').textContent = 'Carregar Logotipo (PNG/JPG)';
-                if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
+                refreshPreview();
                 showToast("Logotipo removido.");
             });
 
@@ -2346,82 +2350,75 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 showCompassCheck, showCompassLabelCheck, compassPositionSelect, compassSizeInput, compassOpacityInput
             ];
 
+            /**
+             * Sincroniza os rótulos de valor (cores e porcentagens) com o estado atual dos controles.
+             */
+            function syncLabels() {
+                const pct = (v) => Math.round(parseFloat(v) * 100) + '%';
+                colorHexSpan.textContent = textColorInput.value.toUpperCase();
+                bgColorHexSpan.textContent = bgColorInput.value.toUpperCase();
+                fontScaleValSpan.textContent = fontScaleInput.value + '%';
+                opacityValSpan.textContent = pct(textOpacityInput.value);
+                textBgOpacityValSpan.textContent = pct(textBgOpacityInput.value);
+                logoBgOpacityValSpan.textContent = pct(logoBgOpacityInput.value);
+                logoScaleValSpan.textContent = logoScaleInput.value + '%';
+                compassSizeValSpan.textContent = compassSizeInput.value + '%';
+                compassOpacityValSpan.textContent = pct(compassOpacityInput.value);
+            }
+
+            /** @type {number} Quadro de animação pendente para o redesenho da pré-visualização */
+            let previewFrame = 0;
+
+            /**
+             * Agenda o redesenho da pré-visualização para o próximo quadro de tela.
+             * Vários eventos no mesmo quadro (ex: 'input' e 'change' do mesmo controle, ou o
+             * arrasto rápido de um slider) resultam em um único redesenho.
+             */
+            function refreshPreview() {
+                if (!currentLoadedImage || previewFrame) return;
+                previewFrame = requestAnimationFrame(() => {
+                    previewFrame = 0;
+                    if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
+                });
+            }
+
             controls.forEach(ctrl => {
                 ctrl.addEventListener('input', () => {
-                    // Atualiza rótulos textuais de porcentagem em tempo real
-                    colorHexSpan.textContent = textColorInput.value.toUpperCase();
-                    bgColorHexSpan.textContent = bgColorInput.value.toUpperCase();
-                    fontScaleValSpan.textContent = fontScaleInput.value;
-                    opacityValSpan.textContent = Math.round(textOpacityInput.value * 100);
-                    textBgOpacityValSpan.textContent = Math.round(textBgOpacityInput.value * 100);
-                    logoBgOpacityValSpan.textContent = Math.round(logoBgOpacityInput.value * 100);
-                    logoScaleValSpan.textContent = logoScaleInput.value;
-                    compassSizeValSpan.textContent = compassSizeInput.value;
-                    compassOpacityValSpan.textContent = Math.round(compassOpacityInput.value * 100);
-
-                    if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
+                    syncLabels();
+                    refreshPreview();
                 });
-                ctrl.addEventListener('change', () => {
-                    if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
-                });
+                ctrl.addEventListener('change', refreshPreview);
             });
 
-            // Preset Dark Pro: Fundo grafite escuro com tipografia branca de alto contraste
-            presetDarkBtn.addEventListener('click', () => {
-                textColorInput.value = '#ffffff';
-                bgColorInput.value = '#0f172a';
-                textOpacityInput.value = 1.0;
-                textBgOpacityInput.value = 0.8;
-                logoBgOpacityInput.value = 0.8;
-                compassOpacityInput.value = 0.85;
-                bgBannerCheck.checked = true;
-                colorHexSpan.textContent = '#FFFFFF';
-                bgColorHexSpan.textContent = '#0F172A';
-                opacityValSpan.textContent = '100';
-                textBgOpacityValSpan.textContent = '80';
-                logoBgOpacityValSpan.textContent = '80';
-                compassOpacityValSpan.textContent = '85';
-                if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
-                showToast("Preset Dark Pro aplicado.");
-            });
+            /**
+             * Presets visuais rápidos: valores aplicados aos controles de cor e opacidade.
+             * - Dark Pro: fundo grafite escuro com tipografia branca de alto contraste
+             * - Light Clean: fundo branco translúcido com tipografia azul petróleo
+             * - Segurança: fundo preto de alta opacidade com texto amarelo vivo
+             */
+            const PRESETS = {
+                dark:   { name: 'Dark Pro',    text: '#ffffff', bg: '#0f172a', textOpacity: 1.0, bannerOpacity: 0.8,  logoBgOpacity: 0.8,  compassOpacity: 0.85 },
+                light:  { name: 'Light Clean', text: '#0f172a', bg: '#ffffff', textOpacity: 1.0, bannerOpacity: 0.85, logoBgOpacity: 0.85, compassOpacity: 0.9 },
+                safety: { name: 'Segurança',   text: '#facc15', bg: '#000000', textOpacity: 1.0, bannerOpacity: 0.9,  logoBgOpacity: 0.9,  compassOpacity: 0.95 }
+            };
 
-            // Preset Light Clean: Fundo branco translúcido com tipografia azul petróleo
-            presetLightBtn.addEventListener('click', () => {
-                textColorInput.value = '#0f172a';
-                bgColorInput.value = '#ffffff';
-                textOpacityInput.value = 1.0;
-                textBgOpacityInput.value = 0.85;
-                logoBgOpacityInput.value = 0.85;
-                compassOpacityInput.value = 0.9;
+            function applyPreset(key) {
+                const p = PRESETS[key];
+                textColorInput.value = p.text;
+                bgColorInput.value = p.bg;
+                textOpacityInput.value = p.textOpacity;
+                textBgOpacityInput.value = p.bannerOpacity;
+                logoBgOpacityInput.value = p.logoBgOpacity;
+                compassOpacityInput.value = p.compassOpacity;
                 bgBannerCheck.checked = true;
-                colorHexSpan.textContent = '#0F172A';
-                bgColorHexSpan.textContent = '#FFFFFF';
-                opacityValSpan.textContent = '100';
-                textBgOpacityValSpan.textContent = '85';
-                logoBgOpacityValSpan.textContent = '85';
-                compassOpacityValSpan.textContent = '90';
-                if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
-                showToast("Preset Light Clean aplicado.");
-            });
+                syncLabels();
+                refreshPreview();
+                showToast('Preset ' + p.name + ' aplicado.');
+            }
 
-            // Preset Segurança: Fundo preto de alta opacidade com texto amarelo vivo (Padrão Engenharia/Topografia)
-            presetSafetyBtn.addEventListener('click', () => {
-                textColorInput.value = '#facc15';
-                bgColorInput.value = '#000000';
-                textOpacityInput.value = 1.0;
-                textBgOpacityInput.value = 0.9;
-                logoBgOpacityInput.value = 0.9;
-                compassOpacityInput.value = 0.95;
-                bgBannerCheck.checked = true;
-                colorHexSpan.textContent = '#FACC15';
-                bgColorHexSpan.textContent = '#000000';
-                opacityValSpan.textContent = '100';
-                textBgOpacityValSpan.textContent = '90';
-                logoBgOpacityValSpan.textContent = '90';
-                compassOpacityValSpan.textContent = '95';
-                if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
-                showToast("Preset Segurança aplicado.");
-            });
+            presetDarkBtn.addEventListener('click', () => applyPreset('dark'));
+            presetLightBtn.addEventListener('click', () => applyPreset('light'));
+            presetSafetyBtn.addEventListener('click', () => applyPreset('safety'));
 
             /**
              * ====================================================================
@@ -2999,6 +2996,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              */
             downloadCurrentBtn.addEventListener('click', async () => {
                 if (!currentLoadedImage) return;
+
+                // Garante que um redesenho ainda agendado seja aplicado antes da exportação
+                if (previewFrame) {
+                    cancelAnimationFrame(previewFrame);
+                    previewFrame = 0;
+                    renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
+                }
 
                 const origName = batchFiles[activeIndex] ? batchFiles[activeIndex].name : 'imagem';
                 const baseName = origName.replace(/\.[^/.]+$/, "");
