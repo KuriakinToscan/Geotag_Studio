@@ -27,6 +27,7 @@ Versão de reestruturação: correções de confiabilidade, metadados preservado
 - Relatório de fotos com falha ao final do lote.
 - Redesenhos agrupados por quadro de tela.
 - Card do logotipo antes da bússola; tamanho padrão de 15% para ambos.
+- Rodapé redesenhado em três linhas (autoria, link para o repositório no GitHub e licença), nas cores do projeto.
 - Novos padrões: faixa no centro inferior, texto superior em branco, azimute no texto e selo de ângulo desligados.
 
 ### Correções
