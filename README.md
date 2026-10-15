@@ -12,9 +12,9 @@
 - [4. Requisitos e Como Executar](#4-requisitos-e-como-executar)
 - [5. Guia de Uso Passo a Passo](#5-guia-de-uso-passo-a-passo)
   - [5.1 Carregamento de Imagens](#51-carregamento-de-imagens)
-  - [5.2 Bússola Gráfica Vetorial](#52-bússola-gráfica-vetorial)
-  - [5.3 Conteúdo e Telemetria Estampada](#53-conteúdo-e-telemetria-estampada)
-  - [5.4 Logotipo Institucional](#54-logotipo-institucional)
+  - [5.2 Logotipo Institucional](#52-logotipo-institucional)
+  - [5.3 Bússola Gráfica Vetorial](#53-bússola-gráfica-vetorial)
+  - [5.4 Conteúdo e Telemetria Estampada](#54-conteúdo-e-telemetria-estampada)
   - [5.5 Estilização e Presets Rápidos](#55-estilização-e-presets-rápidos)
   - [5.6 Visualizador Interativo (Zoom & Pan)](#56-visualizador-interativo-zoom--pan)
   - [5.7 Exportação e Empacotamento ZIP](#57-exportação-e-empacotamento-zip)
@@ -120,7 +120,13 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 - **Duplicados:** Fotos com o mesmo caminho, tamanho e data de modificação são ignoradas. Arquivos de mesmo nome em subpastas diferentes (ex: `DJI_0001.JPG` de voos distintos) são mantidos.
 - Durante o processamento em lote a fila fica bloqueada (não é possível adicionar, remover ou limpar fotos).
 
-### 5.2 Bússola Gráfica Vetorial
+### 5.2 Logotipo Institucional
+- **Logotipo padrão:** o app abre com o logotipo do IBAMA embutido no próprio HTML (base64, sem arquivo externo), no canto superior esquerdo, com o mesmo fundo da bússola e da faixa de texto. Por ser um logotipo oficial, ele é sempre reproduzido sem nenhuma alteração de cores ou formas. **Remover Logotipo** retira o logo; **Usar logotipo padrão (IBAMA)** o restaura.
+- Clique em **Carregar Logotipo** e selecione um arquivo `.png` (com transparência recomendada) ou `.jpg`.
+- Defina o quadrante de exibição do logo e a escala proporcional (% da menor dimensão da foto). Padrão: 15%.
+- **Aparência:** Fundo e transparência seguem o padrão do card 5 ou um ajuste individual. A opacidade do logotipo permite usá-lo como marca d'água translúcida.
+
+### 5.3 Bússola Gráfica Vetorial
 - **Exibir Bússola:** Ativa ou oculta a bússola vetorial na imagem.
 - **Mostrar Ângulo (°):** Adiciona uma etiqueta abaixo da bússola com a indicação precisa do azimute e rumo (ex: `142° Sudeste`). Desabilitado por padrão.
 - **Modo da Bússola:**
@@ -134,10 +140,10 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
   - *Inferior Esquerda*
   - *Inferior Centro*
   - *Inferior Direita*
-- **Tamanho:** Ajuste o diâmetro da bússola (% proporcional à resolução).
+- **Tamanho:** Ajuste o diâmetro da bússola (% proporcional à menor dimensão da foto). Padrão: 15%.
 - **Aparência:** Fundo e transparência seguem o padrão do card 5 ou um ajuste individual (veja a seção 5.5). O selo de graus acompanha o fundo da bússola.
 
-### 5.3 Conteúdo e Telemetria Estampada
+### 5.4 Conteúdo e Telemetria Estampada
 - **Texto Superior:** Campo livre para nome de projeto, cliente, número do lote ou tipo de vistoria (ex: `Vistoria Técnica • Obra 12`). Vem em branco por padrão; quando vazio, a linha de título não é estampada.
 - **Modelo do Drone:** Em modo automático, cada foto recebe o equipamento indicado no seu próprio EXIF (lotes com drones diferentes ficam corretos). Ao digitar um texto, ele passa a ser usado em todas as fotos; apagar o campo volta ao modo automático.
 - **Altitude Estampada:** Escolha entre a altitude absoluta (EXIF GPS ou `AbsoluteAltitude` da DJI) e a altura relativa à decolagem (`RelativeAltitude` da DJI, estampada como `ALT REL`). Se a foto não tiver altura relativa, a absoluta é usada. O padrão é a altura relativa.
@@ -151,17 +157,11 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 ### Configurações Padrão
 | Item | Padrão |
 | :--- | :--- |
-| Bússola | Superior direita, sem o selo de ângulo |
+| Bússola | Superior direita, tamanho 15%, sem o selo de ângulo |
 | Faixa de texto | Centro inferior, sem texto superior |
 | Azimute no texto | Desabilitado |
 | Altitude estampada | Relativa à decolagem (`ALT REL`) |
-| Logotipo | IBAMA, superior esquerdo, mesmo fundo dos demais elementos |
-
-### 5.4 Logotipo Institucional
-- **Logotipo padrão:** o app abre com o logotipo do IBAMA embutido no próprio HTML (base64, sem arquivo externo), no canto superior esquerdo, com o mesmo fundo da bússola e da faixa de texto. Por ser um logotipo oficial, ele é sempre reproduzido sem nenhuma alteração de cores ou formas. **Remover Logotipo** retira o logo; **Usar logotipo padrão (IBAMA)** o restaura.
-- Clique em **Carregar Logotipo** e selecione um arquivo `.png` (com transparência recomendada) ou `.jpg`.
-- Defina o quadrante de exibição do logo e a escala proporcional.
-- **Aparência:** Fundo e transparência seguem o padrão do card 5 ou um ajuste individual. A opacidade do logotipo permite usá-lo como marca d'água translúcida.
+| Logotipo | IBAMA, superior esquerdo, tamanho 15%, mesmo fundo dos demais elementos |
 
 ### 5.5 Estilização e Presets Rápidos
 Três presets profissionais estão disponíveis com um clique:
@@ -205,7 +205,7 @@ $$\text{DD} = \text{Graus} + \frac{\text{Minutos}}{60} + \frac{\text{Segundos}}{
 
 ### Altitude
 - **Absoluta:** `GPSAltitude` do EXIF, negativa quando `GPSAltitudeRef = 1` (abaixo do nível do mar). Na ausência dela, usa-se `drone-dji:AbsoluteAltitude` do XMP. A referência vertical depende do equipamento; a DJI não garante altitude ortométrica.
-- **Relativa:** `drone-dji:RelativeAltitude`, altura de voo em relação ao ponto de decolagem. Selecionável no card 3 e estampada como `ALT REL`.
+- **Relativa:** `drone-dji:RelativeAltitude`, altura de voo em relação ao ponto de decolagem. Selecionável no card 4 e estampada como `ALT REL`.
 
 ### Cascata de Extração de Azimute
 Para garantir que a orientação magnética seja detectada com a máxima fidelidade, o aplicativo implementa uma cadeia de prioridade em cascata:

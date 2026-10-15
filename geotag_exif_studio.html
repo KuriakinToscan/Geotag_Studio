@@ -1154,7 +1154,56 @@
                     </div>
                 </div>
 
-                <!-- CARD 2: BÚSSOLA GRÁFICA VETORIAL & ORIENTAÇÃO -->
+                <!-- CARD 2: LOGOTIPO INSTITUCIONAL (MARCA D'ÁGUA) -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-header-title">
+                            <svg class="card-header-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <span>2. Logotipo Institucional</span>
+                        </div>
+                    </div>
+
+                    <div class="dropzone-grid" style="grid-template-columns: 1fr;">
+                        <label class="drop-btn" id="logo-drop-label">
+                            <span class="drop-btn-title" id="logo-label">Carregar Logotipo (PNG/JPG)</span>
+                            <span class="drop-btn-sub">Transparências em PNG são recomendadas</span>
+                            <input id="logo-upload" type="file" accept="image/png,image/jpeg" style="display:none;">
+                        </label>
+                    </div>
+
+                    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
+                        <button id="remove-logo-btn" type="button" class="btn-secondary" style="font-size:10px; padding:4px 8px; flex:1;">Remover Logotipo</button>
+                        <button id="default-logo-btn" type="button" class="btn-link" style="align-self:center;">↺ Usar logotipo padrão (IBAMA)</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="logo-position">Posicionamento do Logotipo</label>
+                        <select id="logo-position" class="form-control">
+                            <option value="top-left" selected>Superior Esquerda</option>
+                            <option value="top-center">Superior Centro</option>
+                            <option value="top-right">Superior Direita</option>
+                            <option value="bottom-left">Inferior Esquerda</option>
+                            <option value="bottom-center">Inferior Centro</option>
+                            <option value="bottom-right">Inferior Direita</option>
+                        </select>
+                    </div>
+
+                    <!-- Escala do Logotipo -->
+                    <div class="range-container">
+                        <div class="range-header">
+                            <span>Tamanho do Logotipo</span>
+                            <span id="logo-scale-val">15%</span>
+                        </div>
+                        <input id="logo-scale" type="range" min="4" max="30" value="15">
+                    </div>
+
+                    <!-- Aparência (fundo e transparência) do logotipo: padrão global ou ajuste individual -->
+                    <div class="appearance-block" data-element="logo"></div>
+                </div>
+
+                <!-- CARD 3: BÚSSOLA GRÁFICA VETORIAL & ORIENTAÇÃO -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-header-title">
@@ -1162,7 +1211,7 @@
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
                             </svg>
-                            <span>2. Bússola Gráfica Vetorial</span>
+                            <span>3. Bússola Gráfica Vetorial</span>
                         </div>
                     </div>
 
@@ -1205,23 +1254,23 @@
                     <div class="range-container">
                         <div class="range-header">
                             <span>Tamanho da Bússola</span>
-                            <span id="compass-size-val">12%</span>
+                            <span id="compass-size-val">15%</span>
                         </div>
-                        <input id="compass-size" type="range" min="6" max="28" value="12">
+                        <input id="compass-size" type="range" min="6" max="28" value="15">
                     </div>
 
                     <!-- Aparência (fundo e transparência) da bússola: padrão global ou ajuste individual -->
                     <div class="appearance-block" data-element="compass"></div>
                 </div>
 
-                <!-- CARD 3: TEXTO, IDENTIFICAÇÃO E TELEMETRIA ESTAMPADA -->
+                <!-- CARD 4: TEXTO, IDENTIFICAÇÃO E TELEMETRIA ESTAMPADA -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-header-title">
                             <svg class="card-header-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                             </svg>
-                            <span>3. Conteúdo da Faixa de Texto</span>
+                            <span>4. Conteúdo da Faixa de Texto</span>
                         </div>
                     </div>
 
@@ -1281,55 +1330,6 @@
 
                     <!-- Aparência (fundo e transparência) da faixa de texto: padrão global ou ajuste individual -->
                     <div class="appearance-block" data-element="text"></div>
-                </div>
-
-                <!-- CARD 4: LOGOTIPO INSTITUCIONAL (MARCA D'ÁGUA) -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-header-title">
-                            <svg class="card-header-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <span>4. Logotipo Institucional</span>
-                        </div>
-                    </div>
-
-                    <div class="dropzone-grid" style="grid-template-columns: 1fr;">
-                        <label class="drop-btn" id="logo-drop-label">
-                            <span class="drop-btn-title" id="logo-label">Carregar Logotipo (PNG/JPG)</span>
-                            <span class="drop-btn-sub">Transparências em PNG são recomendadas</span>
-                            <input id="logo-upload" type="file" accept="image/png,image/jpeg" style="display:none;">
-                        </label>
-                    </div>
-
-                    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
-                        <button id="remove-logo-btn" type="button" class="btn-secondary" style="font-size:10px; padding:4px 8px; flex:1;">Remover Logotipo</button>
-                        <button id="default-logo-btn" type="button" class="btn-link" style="align-self:center;">↺ Usar logotipo padrão (IBAMA)</button>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="logo-position">Posicionamento do Logotipo</label>
-                        <select id="logo-position" class="form-control">
-                            <option value="top-left" selected>Superior Esquerda</option>
-                            <option value="top-center">Superior Centro</option>
-                            <option value="top-right">Superior Direita</option>
-                            <option value="bottom-left">Inferior Esquerda</option>
-                            <option value="bottom-center">Inferior Centro</option>
-                            <option value="bottom-right">Inferior Direita</option>
-                        </select>
-                    </div>
-
-                    <!-- Escala do Logotipo -->
-                    <div class="range-container">
-                        <div class="range-header">
-                            <span>Tamanho do Logotipo</span>
-                            <span id="logo-scale-val">10%</span>
-                        </div>
-                        <input id="logo-scale" type="range" min="4" max="30" value="10">
-                    </div>
-
-                    <!-- Aparência (fundo e transparência) do logotipo: padrão global ou ajuste individual -->
-                    <div class="appearance-block" data-element="logo"></div>
                 </div>
 
                 <!-- CARD 5: ESTILO VISUAL, TIPOGRAFIA E CORES UNIFICADAS -->
