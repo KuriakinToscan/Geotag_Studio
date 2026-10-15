@@ -47,4 +47,7 @@ Versão de reestruturação: correções de confiabilidade, metadados preservado
 
 ## [1.1]
 
-Versão inicial publicada: estampa de GPS, altitude, azimute, equipamento e data/hora; bússola vetorial em 6 posições; logotipo; presets; zoom e arrasto; processamento em lote com ZIP.
+Versão inicial publicada (commit `aa26018`): estampa de GPS, altitude, azimute, equipamento e data/hora; bússola vetorial em 6 posições; logotipo; presets; zoom e arrasto; processamento em lote com ZIP.
+
+[2.0]: https://github.com/KuriakinToscan/Geotag_Studio/releases/tag/2.0
+[1.1]: https://github.com/KuriakinToscan/Geotag_Studio/tree/aa260184e8cae2073a96e8a5e0b1b03f014c90af

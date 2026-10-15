@@ -1,8 +1,13 @@
-# Dependências e caches
+# O projeto não tem dependências nem etapa de build: o aplicativo é o arquivo
+# geotag_exif_studio.html. Estas regras evitam que arquivos locais entrem no repositório.
+
+# Arquivos exportados pelo aplicativo durante testes locais
+geotag_batch_*.zip
+geotag_*.jpg
+geotag_*.JPG
+
+# Ferramentas opcionais de teste (ex.: Playwright)
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Editores e IDEs
 .vscode/
@@ -15,7 +20,7 @@ yarn-error.log*
 Thumbs.db
 desktop.ini
 
-# Arquivos temporários e testes locais
+# Arquivos temporários
 *.tmp
 *.bak
 *.log
