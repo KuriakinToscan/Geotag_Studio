@@ -399,6 +399,13 @@
             text-decoration: underline;
         }
 
+        .btn-link-danger:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: none;
+            text-decoration: none;
+        }
+
         .queue-items {
             overflow-y: auto;
             flex: 1;
@@ -445,6 +452,11 @@
         .queue-item-remove:hover {
             color: var(--danger);
             background: var(--danger-light);
+        }
+
+        /* Durante o processamento em lote a fila não pode ser alterada */
+        .queue-items.locked .queue-item-remove {
+            visibility: hidden;
         }
 
         .queue-empty-msg {
@@ -1491,6 +1503,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             /** @type {boolean} Token de cancelamento assíncrono para interromper o lote */
             let shouldCancelBatch = false;
 
+            /** @type {number} Contador que identifica o carregamento de imagem mais recente */
+            let loadSequence = 0;
+
             /**
              * ====================================================================
              * MÓDULO 2: MAPEAMENTO DE ELEMENTOS DO DOM (CACHE DE REFERÊNCIAS)
@@ -1593,11 +1608,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             /**
              * Exibe uma notificação temporária flutuante (Toast)
              * @param {string} msg Mensagem a ser apresentada
+             * @param {number} [durationMs] Tempo de exibição em milissegundos (padrão 2800)
              */
-            function showToast(msg) {
+            let toastTimer = null;
+            function showToast(msg, durationMs) {
                 toastEl.textContent = msg;
                 toastEl.classList.add('show');
-                setTimeout(() => toastEl.classList.remove('show'), 2800);
+                // Cancela o temporizador anterior para que avisos seguidos não se escondam antes da hora
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toastEl.classList.remove('show'), durationMs || 2800);
             }
 
             /**
@@ -1707,6 +1726,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             }
 
             /**
+             * Define o texto do equipamento a ser estampado em uma foto.
+             * Em modo automático (campo preenchido pelo app ou vazio), usa o modelo extraído
+             * do EXIF de cada foto, o que mantém o equipamento correto em lotes com drones
+             * diferentes. Se o usuário digitou um texto, ele é usado em todas as fotos.
+             *
+             * @param {Object|null} exif Metadados extraídos
+             * @returns {string}
+             */
+            function resolveDroneText(exif) {
+                if (droneModelInput.dataset.autofilled === 'true' || !droneModelInput.value.trim()) {
+                    return exif ? extractCleanDroneModel(exif.make, exif.model) : '';
+                }
+                return droneModelInput.value.trim();
+            }
+
+            /**
              * Seleciona a altitude a ser estampada conforme a preferência do usuário.
              * Se a altura relativa for escolhida mas não existir na foto, recorre à absoluta
              * (o rótulo estampado indica qual das duas foi usada).
@@ -1791,12 +1826,29 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              */
 
             /**
+             * Identificador de um arquivo para detecção de duplicados na fila.
+             * Usa o caminho relativo quando a foto vem de uma pasta, para que arquivos de mesmo
+             * nome em subpastas diferentes (ex: DJI_0001.JPG de voos distintos) sejam mantidos.
+             *
+             * @param {File} f Arquivo
+             * @returns {string}
+             */
+            function fileKey(f) {
+                return (f.webkitRelativePath || f.name) + '|' + f.size + '|' + f.lastModified;
+            }
+
+            /**
              * Trata a recepção de novos arquivos selecionados via input ou arrastados para a tela.
              * Filtra apenas imagens JPEG válidas e realiza deduplicação com base no nome e tamanho.
              * 
              * @param {FileList|Array<File>} fileList Lista bruta de arquivos
              */
             function handleIncomingFiles(fileList) {
+                if (isBatchRunning) {
+                    showToast("Aguarde o término do processamento em lote para alterar a fila.");
+                    return;
+                }
+
                 const incoming = Array.from(fileList).filter(f => {
                     const ext = f.name.toLowerCase();
                     return ext.endsWith('.jpg') || ext.endsWith('.jpeg') || f.type === 'image/jpeg';
@@ -1809,8 +1861,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
                 let addedCount = 0;
                 incoming.forEach(f => {
-                    // Evita adicionar arquivos duplicados com o mesmo nome e tamanho em bytes
-                    const exists = batchFiles.some(b => b.name === f.name && b.size === f.size);
+                    // Evita duplicados: mesmo caminho relativo (ou nome), tamanho e data de modificação
+                    const key = fileKey(f);
+                    const exists = batchFiles.some(b => fileKey(b) === key);
                     if (!exists) {
                         batchFiles.push(f);
                         addedCount++;
@@ -1855,8 +1908,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
                 batchCounter.textContent = total + (total === 1 ? ' imagem na fila' : ' imagens na fila');
                 batchCounter.className = 'batch-counter active';
-                processBatchBtn.disabled = false;
-                downloadCurrentBtn.disabled = false;
+                processBatchBtn.disabled = isBatchRunning;
+                downloadCurrentBtn.disabled = isBatchRunning;
 
                 queueList.innerHTML = '';
                 batchFiles.forEach((file, idx) => {
@@ -1896,14 +1949,41 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              * @param {number} indexToRemove Índice do arquivo a ser descartado
              */
             function removeFileFromQueue(indexToRemove) {
+                if (isBatchRunning) {
+                    showToast("Aguarde o término do processamento em lote para alterar a fila.");
+                    return;
+                }
+
+                const removedActive = indexToRemove === activeIndex;
                 batchFiles.splice(indexToRemove, 1);
-                if (activeIndex >= batchFiles.length) {
-                    activeIndex = Math.max(0, batchFiles.length - 1);
+
+                if (batchFiles.length === 0) {
+                    releaseActiveImage();
+                    activeIndex = 0;
+                    updateQueueUI();
+                    return;
                 }
+
+                // Mantém a seleção na mesma foto quando um item anterior a ela é removido
+                if (indexToRemove < activeIndex) activeIndex--;
+                if (activeIndex >= batchFiles.length) activeIndex = batchFiles.length - 1;
+
                 updateQueueUI();
-                if (batchFiles.length > 0) {
-                    loadAndRenderActiveImage(activeIndex);
+                if (removedActive) loadAndRenderActiveImage(activeIndex);
+            }
+
+            /**
+             * Descarta a imagem ativa, cancela carregamentos pendentes e libera a memória.
+             */
+            function releaseActiveImage() {
+                loadSequence++;
+                if (currentObjectUrl) {
+                    URL.revokeObjectURL(currentObjectUrl);
+                    currentObjectUrl = null;
                 }
+                currentLoadedImage = null;
+                activeExif = null;
+                renderIndicator.style.display = 'none';
             }
 
             /**
@@ -1911,6 +1991,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              * Libera pontualmente os recursos de memória RAM (Object URLs revogados).
              */
             function clearQueue() {
+                if (isBatchRunning) {
+                    showToast("Aguarde o término do processamento em lote para alterar a fila.");
+                    return;
+                }
                 if (batchFiles.length === 0) {
                     showToast("A fila já está vazia.");
                     return;
@@ -1920,12 +2004,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 activeIndex = 0;
 
                 // Libera recursos e memória RAM de referências anteriores
-                if (currentObjectUrl) {
-                    URL.revokeObjectURL(currentObjectUrl);
-                    currentObjectUrl = null;
-                }
-                currentLoadedImage = null;
-                activeExif = null;
+                releaseActiveImage();
 
                 // Limpa o Canvas de visualização
                 const ctx = previewCanvas.getContext('2d');
@@ -1960,115 +2039,156 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              * ====================================================================
              */
 
+            /** Tamanho do trecho inicial do JPEG lido para localizar os blocos EXIF e XMP */
+            const METADATA_SLICE_BYTES = 262144;
+
+            /** Tempo máximo de espera pelo parser EXIF antes de seguir sem metadados */
+            const EXIF_TIMEOUT_MS = 8000;
+
+            /**
+             * Lê as tags EXIF de um Blob com a biblioteca EXIF-js, garantindo que a Promise
+             * sempre termine: a biblioteca não sinaliza erros de leitura, então um tempo limite
+             * e blocos try/catch evitam que o carregamento ou o lote fiquem travados.
+             *
+             * @param {Blob} blob Arquivo ou trecho de arquivo JPEG
+             * @returns {Promise<Object>} Tags EXIF (objeto vazio em caso de falha)
+             */
+            function readExifTags(blob) {
+                return new Promise((resolve) => {
+                    let finished = false;
+                    const finish = (tags) => {
+                        if (finished) return;
+                        finished = true;
+                        clearTimeout(timer);
+                        resolve(tags || {});
+                    };
+                    const timer = setTimeout(() => finish({}), EXIF_TIMEOUT_MS);
+                    try {
+                        const started = EXIF.getData(blob, function() {
+                            try {
+                                finish(EXIF.getAllTags(this));
+                            } catch (e) {
+                                finish({});
+                            }
+                        });
+                        if (!started) finish({});
+                    } catch (e) {
+                        console.warn("Falha ao ler EXIF:", e);
+                        finish({});
+                    }
+                });
+            }
+
             /**
              * Realiza a leitura e extração completa de metadados de uma imagem JPEG.
              * Processa:
              * - Tags EXIF padrão (GPS, Data/Hora, Câmera, Fabricante).
-             * - Blocos XMP estendidos proprietários DJI (GimbalYawDegree, FlightYawDegree, AbsoluteAltitude).
-             * - Análise de fallback em texto binário caso tags EXIF estejam truncadas.
+             * - Blocos XMP estendidos proprietários DJI (GimbalYawDegree, FlightYawDegree,
+             *   AbsoluteAltitude, RelativeAltitude).
+             * 
+             * Os blocos EXIF ficam no início do JPEG, por isso apenas os primeiros 256 KB são
+             * lidos; o arquivo completo só é lido se nenhuma tag for encontrada nesse trecho.
              * 
              * @param {File} file Objeto File da imagem
-             * @param {HTMLImageElement} imgElement Elemento de imagem carregado
              * @returns {Promise<Object>} Estrutura contendo todas as variáveis de telemetria
              */
-            async function extractExifAndXmp(file, imgElement) {
-                return new Promise((resolve) => {
-                    EXIF.getData(imgElement, async function() {
-                        const tags = EXIF.getAllTags(this) || {};
+            async function extractExifAndXmp(file) {
+                let tags = await readExifTags(file.slice(0, METADATA_SLICE_BYTES));
+                if (Object.keys(tags).length === 0 && file.size > METADATA_SLICE_BYTES) {
+                    tags = await readExifTags(file);
+                }
 
-                        // 1. Extração de Coordenadas Geográficas (GPS)
-                        let lat = null, lon = null;
-                        if (tags.GPSLatitude && tags.GPSLatitudeRef && tags.GPSLongitude && tags.GPSLongitudeRef) {
-                            lat = convertDMSToDD(tags.GPSLatitude[0], tags.GPSLatitude[1], tags.GPSLatitude[2], tags.GPSLatitudeRef);
-                            lon = convertDMSToDD(tags.GPSLongitude[0], tags.GPSLongitude[1], tags.GPSLongitude[2], tags.GPSLongitudeRef);
+                // 1. Extração de Coordenadas Geográficas (GPS)
+                let lat = null, lon = null;
+                if (tags.GPSLatitude && tags.GPSLatitudeRef && tags.GPSLongitude && tags.GPSLongitudeRef) {
+                    lat = convertDMSToDD(tags.GPSLatitude[0], tags.GPSLatitude[1], tags.GPSLatitude[2], tags.GPSLatitudeRef);
+                    lon = convertDMSToDD(tags.GPSLongitude[0], tags.GPSLongitude[1], tags.GPSLongitude[2], tags.GPSLongitudeRef);
+                }
+
+                // 2. Extração de Altitude (EXIF padrão)
+                let alt = null;
+                if (tags.GPSAltitude !== undefined && tags.GPSAltitude !== null) {
+                    alt = Number(tags.GPSAltitude);
+                    // GPSAltitudeRef = 1 indica altitude abaixo do nível do mar
+                    if (Number(tags.GPSAltitudeRef) === 1) alt = -alt;
+                }
+
+                // 3. Extração de Data e Hora
+                let dateStr = tags.DateTimeOriginal || tags.DateTime || tags.GPSDateStamp || '';
+
+                // 4. Extração de Câmera e Modelo
+                let make = tags.Make || '';
+                let model = tags.Model || '';
+
+                // 5. Extração Avançada de Azimute / Orientação da Imagem
+                let heading = null;
+                let headingSource = 'Nenhum';
+
+                // Prioridade 1: EXIF Padrão GPSImgDirection (direção apontada pela lente)
+                if (tags.GPSImgDirection !== undefined && tags.GPSImgDirection !== null) {
+                    heading = normAngle(Number(tags.GPSImgDirection));
+                    headingSource = 'EXIF (GPSImgDirection)';
+                }
+
+                // Prioridade 2 e 3: Inspeção dos Blocos XMP Embutidos (Drones DJI)
+                let xmpAlt = null;
+                let relAlt = null;
+                try {
+                    // Lê o trecho inicial da imagem para localizar o pacote XML de XMP
+                    const slice = file.slice(0, METADATA_SLICE_BYTES);
+                    const text = await slice.text();
+
+                    if (text && text.includes('drone-dji:')) {
+                        // GimbalYawDegree é a orientação azimutal exata da câmera acoplada ao gimbal
+                        const gimbalYaw = extractXmpNumber(text, ['GimbalYawDegree']);
+                        // FlightYawDegree é o azimute da fuselagem/nariz do drone
+                        const flightYaw = extractXmpNumber(text, ['FlightYawDegree']);
+                        const absAlt = extractXmpNumber(text, ['AbsoluteAltitude']);
+                        // RelativeAltitude é a altura de voo em relação ao ponto de decolagem
+                        relAlt = extractXmpNumber(text, ['RelativeAltitude']);
+
+                        if (gimbalYaw !== null) {
+                            heading = normAngle(gimbalYaw);
+                            headingSource = 'DJI XMP (GimbalYawDegree)';
+                        } else if (flightYaw !== null && heading === null) {
+                            heading = normAngle(flightYaw);
+                            headingSource = 'DJI XMP (FlightYawDegree)';
                         }
 
-                        // 2. Extração de Altitude (EXIF padrão)
-                        let alt = null;
-                        if (tags.GPSAltitude !== undefined && tags.GPSAltitude !== null) {
-                            alt = Number(tags.GPSAltitude);
-                            // GPSAltitudeRef = 1 indica altitude abaixo do nível do mar
-                            if (Number(tags.GPSAltitudeRef) === 1) alt = -alt;
+                        if (absAlt !== null) {
+                            xmpAlt = absAlt;
                         }
+                    }
+                } catch (e) {
+                    console.warn("Falha ao efetuar parse do bloco XMP:", e);
+                }
 
-                        // 3. Extração de Data e Hora
-                        let dateStr = tags.DateTimeOriginal || tags.DateTime || tags.GPSDateStamp || '';
+                // Prioridade 4: Fallbacks adicionais de rumo EXIF (GPSTrack, GPSDestBearing)
+                if (heading === null && tags.GPSTrack !== undefined) {
+                    heading = normAngle(Number(tags.GPSTrack));
+                    headingSource = 'EXIF (GPSTrack)';
+                }
+                if (heading === null && tags.GPSDestBearing !== undefined) {
+                    heading = normAngle(Number(tags.GPSDestBearing));
+                    headingSource = 'EXIF (GPSDestBearing)';
+                }
 
-                        // 4. Extração de Câmera e Modelo
-                        let make = tags.Make || '';
-                        let model = tags.Model || '';
+                // Se altitude EXIF não estiver presente, utiliza a altitude absoluta do pacote XMP
+                if ((alt === null || isNaN(alt)) && xmpAlt !== null) {
+                    alt = xmpAlt;
+                }
 
-                        // 5. Extração Avançada de Azimute / Orientação da Imagem
-                        let heading = null;
-                        let headingSource = 'Nenhum';
-
-                        // Prioridade 1: EXIF Padrão GPSImgDirection (direção apontada pela lente)
-                        if (tags.GPSImgDirection !== undefined && tags.GPSImgDirection !== null) {
-                            heading = normAngle(Number(tags.GPSImgDirection));
-                            headingSource = 'EXIF (GPSImgDirection)';
-                        }
-
-                        // Prioridade 2 e 3: Inspeção dos Blocos XMP Embutidos (Drones DJI)
-                        let xmpAlt = null;
-                        let relAlt = null;
-                        try {
-                            // Lê os primeiros 128 KB da imagem para localizar o pacote XML de XMP
-                            const slice = file.slice(0, 131072);
-                            const text = await slice.text();
-
-                            if (text && text.includes('drone-dji:')) {
-                                // GimbalYawDegree é a orientação azimutal exata da câmera acoplada ao gimbal
-                                const gimbalYaw = extractXmpNumber(text, ['GimbalYawDegree']);
-                                // FlightYawDegree é o azimute da fuselagem/nariz do drone
-                                const flightYaw = extractXmpNumber(text, ['FlightYawDegree']);
-                                const absAlt = extractXmpNumber(text, ['AbsoluteAltitude']);
-                                // RelativeAltitude é a altura de voo em relação ao ponto de decolagem
-                                relAlt = extractXmpNumber(text, ['RelativeAltitude']);
-
-                                if (gimbalYaw !== null) {
-                                    heading = normAngle(gimbalYaw);
-                                    headingSource = 'DJI XMP (GimbalYawDegree)';
-                                } else if (flightYaw !== null && heading === null) {
-                                    heading = normAngle(flightYaw);
-                                    headingSource = 'DJI XMP (FlightYawDegree)';
-                                }
-
-                                if (absAlt !== null) {
-                                    xmpAlt = absAlt;
-                                }
-                            }
-                        } catch (e) {
-                            console.warn("Falha ao efetuar parse do bloco XMP:", e);
-                        }
-
-                        // Prioridade 4: Fallbacks adicionais de rumo EXIF (GPSTrack, GPSDestBearing)
-                        if (heading === null && tags.GPSTrack !== undefined) {
-                            heading = normAngle(Number(tags.GPSTrack));
-                            headingSource = 'EXIF (GPSTrack)';
-                        }
-                        if (heading === null && tags.GPSDestBearing !== undefined) {
-                            heading = normAngle(Number(tags.GPSDestBearing));
-                            headingSource = 'EXIF (GPSDestBearing)';
-                        }
-
-                        // Se altitude EXIF não estiver presente, utiliza a altitude absoluta do pacote XMP
-                        if ((alt === null || isNaN(alt)) && xmpAlt !== null) {
-                            alt = xmpAlt;
-                        }
-
-                        resolve({
-                            latitude: lat,
-                            longitude: lon,
-                            altitude: alt,
-                            relativeAltitude: relAlt,
-                            dateTime: dateStr,
-                            make: make,
-                            model: model,
-                            heading: heading,
-                            headingSource: headingSource
-                        });
-                    });
-                });
+                return {
+                    latitude: lat,
+                    longitude: lon,
+                    altitude: alt,
+                    relativeAltitude: relAlt,
+                    dateTime: dateStr,
+                    make: make,
+                    model: model,
+                    heading: heading,
+                    headingSource: headingSource
+                };
             }
 
             /**
@@ -2078,80 +2198,105 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              */
 
             /**
-             * Carrega a imagem indicada pelo índice para a memória RAM e comanda o redesenho
+             * Decodifica uma imagem a partir de um endereço (Object URL).
+             * @param {string} url Endereço da imagem
+             * @returns {Promise<HTMLImageElement>} Imagem carregada
+             */
+            function loadImage(url) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error('Falha ao decodificar a imagem'));
+                    img.src = url;
+                });
+            }
+
+            /**
+             * Carrega a imagem indicada pelo índice para a memória RAM e comanda o redesenho.
+             * Cada chamada recebe um número de sequência: se o usuário selecionar outra foto
+             * antes do término, o resultado desta chamada é descartado, evitando exibir uma
+             * imagem com metadados de outra.
+             * 
              * @param {number} index Índice do arquivo em batchFiles
              */
             async function loadAndRenderActiveImage(index) {
-                if (!batchFiles[index]) return;
-
-                renderIndicator.style.display = 'flex';
                 const file = batchFiles[index];
+                if (!file) return;
 
-                // Libera a URL do objeto anterior para manter a memória RAM enxuta
-                if (currentObjectUrl) {
-                    URL.revokeObjectURL(currentObjectUrl);
+                const seq = ++loadSequence;
+                renderIndicator.style.display = 'flex';
+
+                const url = URL.createObjectURL(file);
+                let img, exif;
+                try {
+                    img = await loadImage(url);
+                    exif = await extractExifAndXmp(file);
+                } catch (e) {
+                    URL.revokeObjectURL(url);
+                    if (seq === loadSequence) {
+                        renderIndicator.style.display = 'none';
+                        showToast("Erro ao decodificar a imagem selecionada.");
+                    }
+                    return;
                 }
 
-                currentObjectUrl = URL.createObjectURL(file);
-                const img = new Image();
+                // Uma seleção mais recente (ou a limpeza da fila) tornou este carregamento obsoleto
+                if (seq !== loadSequence) {
+                    URL.revokeObjectURL(url);
+                    return;
+                }
 
-                img.onload = async function() {
-                    currentLoadedImage = img;
-                    activeExif = await extractExifAndXmp(file, img);
+                // Libera a URL do objeto anterior para manter a memória RAM enxuta
+                if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+                currentObjectUrl = url;
+                currentLoadedImage = img;
+                activeExif = exif;
 
-                    // Atualiza o painel de telemetria na barra lateral
-                    if (activeExif.latitude !== null && activeExif.longitude !== null) {
-                        exifGpsDisplay.textContent = activeExif.latitude.toFixed(6) + ', ' + activeExif.longitude.toFixed(6);
-                    } else {
-                        exifGpsDisplay.textContent = 'Sem GPS';
-                    }
+                // Atualiza o painel de telemetria na barra lateral
+                if (activeExif.latitude !== null && activeExif.longitude !== null) {
+                    exifGpsDisplay.textContent = activeExif.latitude.toFixed(6) + ', ' + activeExif.longitude.toFixed(6);
+                } else {
+                    exifGpsDisplay.textContent = 'Sem GPS';
+                }
 
-                    if (activeExif.altitude !== null && !isNaN(activeExif.altitude)) {
-                        exifAltDisplay.textContent = activeExif.altitude.toFixed(1) + ' m';
-                    } else {
-                        exifAltDisplay.textContent = 'Sem Altitude';
-                    }
+                if (activeExif.altitude !== null && !isNaN(activeExif.altitude)) {
+                    exifAltDisplay.textContent = activeExif.altitude.toFixed(1) + ' m';
+                } else {
+                    exifAltDisplay.textContent = 'Sem Altitude';
+                }
 
-                    if (activeExif.relativeAltitude !== null && !isNaN(activeExif.relativeAltitude)) {
-                        exifRelAltDisplay.textContent = activeExif.relativeAltitude.toFixed(1) + ' m';
-                    } else {
-                        exifRelAltDisplay.textContent = 'Sem Altura Relativa';
-                    }
+                if (activeExif.relativeAltitude !== null && !isNaN(activeExif.relativeAltitude)) {
+                    exifRelAltDisplay.textContent = activeExif.relativeAltitude.toFixed(1) + ' m';
+                } else {
+                    exifRelAltDisplay.textContent = 'Sem Altura Relativa';
+                }
 
-                    if (activeExif.heading !== null && !isNaN(activeExif.heading)) {
-                        exifAltHeadingDisplay.textContent = activeExif.heading.toFixed(1) + '° (' + getCardinal(activeExif.heading) + ')';
-                        exifHeadingSourceDisplay.textContent = activeExif.headingSource;
-                    } else {
-                        exifAltHeadingDisplay.textContent = 'Sem Azimute';
-                        exifHeadingSourceDisplay.textContent = 'Nenhum';
-                    }
+                if (activeExif.heading !== null && !isNaN(activeExif.heading)) {
+                    exifAltHeadingDisplay.textContent = activeExif.heading.toFixed(1) + '° (' + getCardinal(activeExif.heading) + ')';
+                    exifHeadingSourceDisplay.textContent = activeExif.headingSource;
+                } else {
+                    exifAltHeadingDisplay.textContent = 'Sem Azimute';
+                    exifHeadingSourceDisplay.textContent = 'Nenhum';
+                }
 
-                    exifDateDisplay.textContent = activeExif.dateTime || 'Sem Data';
-                    
-                    const cleanModel = extractCleanDroneModel(activeExif.make, activeExif.model);
-                    exifCameraDisplay.textContent = cleanModel || 'Câmera Padrão';
-                    
-                    if (!droneModelInput.value || droneModelInput.dataset.autofilled === "true") {
-                        droneModelInput.value = cleanModel;
-                        droneModelInput.dataset.autofilled = "true";
-                    }
+                exifDateDisplay.textContent = activeExif.dateTime || 'Sem Data';
+                
+                const cleanModel = extractCleanDroneModel(activeExif.make, activeExif.model);
+                exifCameraDisplay.textContent = cleanModel || 'Câmera Padrão';
+                
+                if (!droneModelInput.value || droneModelInput.dataset.autofilled === "true") {
+                    droneModelInput.value = cleanModel;
+                    droneModelInput.dataset.autofilled = "true";
+                }
 
-                    // Renderiza o Canvas de visualização e esconde a tela de boas-vindas
-                    renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
-                    placeholderView.style.display = 'none';
-                    previewCanvas.style.display = 'block';
-                    renderIndicator.style.display = 'none';
+                // Renderiza o Canvas de visualização e esconde a tela de boas-vindas
+                renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
+                placeholderView.style.display = 'none';
+                previewCanvas.style.display = 'block';
+                renderIndicator.style.display = 'none';
 
-                    // Ajusta o enquadramento inicial do Canvas no viewport
-                    fitCanvasToViewport();
-                };
-
-                img.onerror = function() {
-                    renderIndicator.style.display = 'none';
-                    showToast("Erro ao decodificar a imagem selecionada.");
-                };
-
-                img.src = currentObjectUrl;
+                // Ajusta o enquadramento inicial do Canvas no viewport
+                fitCanvasToViewport();
             }
 
             /**
@@ -2187,6 +2332,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              * MÓDULO 7: PRESETS RÁPIDOS E EVENTOS DE SINCRONIZAÇÃO VISUAL
              * ====================================================================
              */
+            // Registrado antes dos demais ouvintes para que o redesenho já use o modo correto.
+            // Texto digitado pelo usuário desativa o preenchimento automático do equipamento;
+            // apagar o campo volta ao modo automático (modelo do EXIF de cada foto)
+            droneModelInput.addEventListener('input', () => {
+                droneModelInput.dataset.autofilled = droneModelInput.value.trim() === '' ? 'true' : 'false';
+            });
+
             const controls = [
                 customTextInput, droneModelInput, showGpsCheck, showDroneCheck, showHeadingCheck, showDateCheck,
                 textPositionSelect, altitudeSourceSelect, logoPositionSelect, textColorInput, bgColorInput, fontScaleInput,
@@ -2512,9 +2664,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
                 // Linha 3: Identificação do Equipamento e Data/Hora
                 const infoParts = [];
-                const customDrone = droneModelInput.value.trim();
-                if (showDroneCheck.checked && customDrone) {
-                    infoParts.push(customDrone);
+                const droneText = resolveDroneText(exif);
+                if (showDroneCheck.checked && droneText) {
+                    infoParts.push(droneText);
                 }
 
                 if (showDateCheck.checked && exif && exif.dateTime) {
@@ -2763,110 +2915,187 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              * ====================================================================
              */
 
+            /** Qualidade JPEG única para exportação individual e em lote */
+            const EXPORT_JPEG_QUALITY = 0.95;
+
+            /**
+             * Converte o conteúdo do Canvas em Blob JPEG.
+             * Rejeita quando o navegador devolve null (ex: canvas acima do limite de área do
+             * dispositivo), em vez de deixar a operação sem resposta.
+             *
+             * @param {HTMLCanvasElement} canvas Canvas renderizado
+             * @returns {Promise<Blob>}
+             */
+            function canvasToJpegBlob(canvas) {
+                return new Promise((resolve, reject) => {
+                    canvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('O navegador não conseguiu gerar o JPEG (imagem grande demais para este dispositivo?)'));
+                    }, 'image/jpeg', EXPORT_JPEG_QUALITY);
+                });
+            }
+
+            /**
+             * Dispara o download de um Blob com o nome informado.
+             * @param {Blob} blob Conteúdo
+             * @param {string} filename Nome do arquivo
+             */
+            function downloadBlob(blob, filename) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(link.href), 15000);
+            }
+
+            /**
+             * Gera o caminho do arquivo dentro do ZIP, preservando a subpasta de origem e
+             * acrescentando sufixo numérico quando o nome já foi usado no pacote.
+             *
+             * @param {File} file Arquivo original
+             * @param {Set<string>} usedNames Caminhos já usados (comparação sem diferenciar maiúsculas)
+             * @returns {string}
+             */
+            function uniqueZipPath(file, usedNames) {
+                const relPath = file.webkitRelativePath || file.name;
+                const slash = relPath.lastIndexOf('/');
+                const dir = slash >= 0 ? relPath.slice(0, slash + 1) : '';
+                const name = relPath.slice(slash + 1);
+                const dot = name.lastIndexOf('.');
+                const base = dot > 0 ? name.slice(0, dot) : name;
+                const ext = dot > 0 ? name.slice(dot) : '.jpg';
+
+                let candidate = dir + 'geotag_' + base + ext;
+                for (let n = 2; usedNames.has(candidate.toLowerCase()); n++) {
+                    candidate = dir + 'geotag_' + base + '_' + n + ext;
+                }
+                usedNames.add(candidate.toLowerCase());
+                return candidate;
+            }
+
+            /**
+             * Bloqueia ou libera os controles que alteram a fila durante o processamento em lote.
+             * @param {boolean} running Indica se o lote está em execução
+             */
+            function setBatchRunningUI(running) {
+                isBatchRunning = running;
+                processBatchBtn.disabled = running || batchFiles.length === 0;
+                downloadCurrentBtn.disabled = running || !currentLoadedImage;
+                clearQueueBtn.disabled = running;
+                filesUpload.disabled = running;
+                folderUpload.disabled = running;
+                queueList.classList.toggle('locked', running);
+                cancelBatchBtn.style.display = running ? 'block' : 'none';
+                cancelBatchBtn.disabled = !running;
+                batchProgressBox.classList.toggle('active', running);
+                if (!running) {
+                    progressBarFill.style.width = '0%';
+                    progressPercentageText.textContent = '0%';
+                }
+            }
+
             /**
              * Baixa a imagem atualmente visualizada com todas as estampas aplicadas
              */
-            downloadCurrentBtn.addEventListener('click', () => {
+            downloadCurrentBtn.addEventListener('click', async () => {
                 if (!currentLoadedImage) return;
 
-                const link = document.createElement('a');
                 const origName = batchFiles[activeIndex] ? batchFiles[activeIndex].name : 'imagem';
                 const baseName = origName.replace(/\.[^/.]+$/, "");
-                link.download = 'geotag_' + baseName + '.jpg';
-                link.href = previewCanvas.toDataURL('image/jpeg', 0.95);
-                link.click();
-                showToast("Download da imagem atual concluído.");
+                try {
+                    const blob = await canvasToJpegBlob(previewCanvas);
+                    downloadBlob(blob, 'geotag_' + baseName + '.jpg');
+                    showToast("Download da imagem atual concluído.");
+                } catch (e) {
+                    console.error(e);
+                    showToast("Falha ao gerar o JPEG: " + e.message);
+                }
             });
 
             /**
-             * Processa todas as imagens da fila em segundo plano e gera um arquivo ZIP
+             * Processa todas as imagens da fila e gera um arquivo ZIP.
+             * A fila fica bloqueada durante a execução; fotos com falha são ignoradas e
+             * informadas ao final, sem interromper o restante do lote.
              */
             processBatchBtn.addEventListener('click', async () => {
                 if (batchFiles.length === 0 || isBatchRunning) return;
 
-                isBatchRunning = true;
                 shouldCancelBatch = false;
+                setBatchRunningUI(true);
 
-                processBatchBtn.disabled = true;
-                downloadCurrentBtn.disabled = true;
-                cancelBatchBtn.style.display = 'block';
-                cancelBatchBtn.disabled = false;
-                batchProgressBox.classList.add('active');
-
-                const zip = new JSZip();
-                const total = batchFiles.length;
+                const files = batchFiles.slice();
+                const total = files.length;
+                const failures = [];
+                const usedNames = new Set();
                 let completed = 0;
 
-                const tempCanvas = document.createElement('canvas');
-                const quality = 0.92;
+                try {
+                    const zip = new JSZip();
+                    const tempCanvas = document.createElement('canvas');
 
-                for (let i = 0; i < total; i++) {
-                    if (shouldCancelBatch) {
-                        showToast("Processamento em lote interrompido pelo usuário.");
-                        break;
+                    for (let i = 0; i < total; i++) {
+                        if (shouldCancelBatch) break;
+
+                        const file = files[i];
+                        progressStatusText.textContent = 'Processando ' + (i + 1) + ' de ' + total + ': ' + file.name;
+                        const percent = Math.round((i / total) * 100);
+                        progressBarFill.style.width = percent + '%';
+                        progressPercentageText.textContent = percent + '%';
+
+                        const fileUrl = URL.createObjectURL(file);
+                        try {
+                            const img = await loadImage(fileUrl);
+                            const fileExif = await extractExifAndXmp(file);
+                            renderToCanvas(img, tempCanvas, fileExif);
+                            const blob = await canvasToJpegBlob(tempCanvas);
+                            zip.file(uniqueZipPath(file, usedNames), blob);
+                            completed++;
+                        } catch (e) {
+                            console.warn('Falha ao processar ' + file.name + ':', e);
+                            failures.push(file.name);
+                        } finally {
+                            URL.revokeObjectURL(fileUrl); // Liberação imediata da memória RAM
+                        }
                     }
 
-                    const file = batchFiles[i];
-                    progressStatusText.textContent = 'Processando ' + (i + 1) + ' de ' + total + ': ' + file.name;
-                    const percent = Math.round(((i) / total) * 100);
-                    progressBarFill.style.width = percent + '%';
-                    progressPercentageText.textContent = percent + '%';
+                    // Libera a memória do canvas temporário
+                    tempCanvas.width = 0;
+                    tempCanvas.height = 0;
 
-                    await new Promise((resolve) => {
-                        const fileUrl = URL.createObjectURL(file);
-                        const img = new Image();
+                    if (shouldCancelBatch) {
+                        showToast("Processamento em lote interrompido pelo usuário.");
+                    } else if (completed === 0) {
+                        showToast("Nenhuma imagem pôde ser processada.");
+                    } else {
+                        // Geração e download do arquivo ZIP compactado
+                        progressStatusText.textContent = 'Gerando arquivo ZIP compactado...';
+                        progressBarFill.style.width = '100%';
+                        progressPercentageText.textContent = '100%';
 
-                        img.onload = async function() {
-                            const fileExif = await extractExifAndXmp(file, img);
-                            renderToCanvas(img, tempCanvas, fileExif);
+                        const content = await zip.generateAsync({
+                            type: "blob",
+                            compression: "DEFLATE",
+                            compressionOptions: { level: 6 }
+                        }, function(metadata) {
+                            progressStatusText.textContent = 'Comprimindo ZIP: ' + Math.round(metadata.percent) + '%';
+                        });
 
-                            tempCanvas.toBlob((blob) => {
-                                zip.file('geotag_' + file.name, blob);
-                                URL.revokeObjectURL(fileUrl); // Liberação imediata da memória RAM
-                                completed++;
-                                resolve();
-                            }, 'image/jpeg', quality);
-                        };
+                        downloadBlob(content, 'geotag_batch_' + Date.now() + '.zip');
 
-                        img.onerror = function() {
-                            URL.revokeObjectURL(fileUrl);
-                            resolve();
-                        };
-
-                        img.src = fileUrl;
-                    });
+                        if (failures.length > 0) {
+                            const list = failures.slice(0, 3).join(', ') + (failures.length > 3 ? '…' : '');
+                            showToast('ZIP gerado com ' + completed + ' de ' + total + ' fotos. Falharam: ' + list, 8000);
+                        } else {
+                            showToast("Download do lote ZIP concluído com sucesso!");
+                        }
+                    }
+                } catch (e) {
+                    console.error('Erro no processamento em lote:', e);
+                    showToast("Erro no processamento em lote: " + e.message, 8000);
+                } finally {
+                    // Restaura o estado da barra lateral após conclusão, erro ou cancelamento
+                    setBatchRunningUI(false);
                 }
-
-                // Geração e download do arquivo ZIP compactado
-                if (!shouldCancelBatch && completed > 0) {
-                    progressStatusText.textContent = 'Gerando arquivo ZIP compactado...';
-                    progressBarFill.style.width = '100%';
-                    progressPercentageText.textContent = '100%';
-
-                    const content = await zip.generateAsync({
-                        type: "blob",
-                        compression: "DEFLATE",
-                        compressionOptions: { level: 6 }
-                    }, function(metadata) {
-                        progressStatusText.textContent = 'Comprimindo ZIP: ' + Math.round(metadata.percent) + '%';
-                    });
-
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(content);
-                    link.download = 'geotag_batch_' + Date.now() + '.zip';
-                    link.click();
-                    setTimeout(() => URL.revokeObjectURL(link.href), 15000);
-                    showToast("Download do lote ZIP concluído com sucesso!");
-                }
-
-                // Restaura o estado da barra lateral após conclusão
-                isBatchRunning = false;
-                cancelBatchBtn.style.display = 'none';
-                batchProgressBox.classList.remove('active');
-                processBatchBtn.disabled = false;
-                downloadCurrentBtn.disabled = false;
-                progressBarFill.style.width = '0%';
-                progressPercentageText.textContent = '0%';
             });
 
             // Botão de Interrupção Emergencial
