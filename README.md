@@ -51,7 +51,7 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 * 🛡️ **Logotipo / Marca d'Água:**
   Suporte a logotipos corporativos em formato PNG transparente ou JPEG, com escala proporcional e controle de opacidade da caixa de fundo.
 * ⚡ **Processamento em Lote de Alto Desempenho:**
-  Capacidade de processar centenas de fotos sequencialmente, com acompanhamento de progresso em tempo real, opção de interrupção imediata e empacotamento compactado em arquivo `.zip` via motor DEFLATE.
+  Capacidade de processar centenas de fotos sequencialmente, com acompanhamento de progresso em tempo real, opção de interrupção imediata e empacotamento em arquivo `.zip` gerado localmente (dividido em partes de até 2 GB em lotes muito grandes).
 * 🔍 **Viewport com Zoom & Pan Suave:**
   Inspeção detalhada de pixels em alta resolução com navegação por arrasto do mouse e zoom responsivo (10% até 500%).
 
@@ -76,8 +76,8 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 │   └── Tipografia baseada na System Font Stack (sem chamadas web)       │
 ├────────────────────────────────────────────────────────────────────────┤
 │  [Bibliotecas Integradas Inline]                                       │
-│   ├── EXIF-js v2.3.0: Parser binário de blocos TIFF/EXIF               │
-│   └── JSZip v3.10.1: Criação e compressão assíncrona de arquivos ZIP   │
+│   └── EXIF-js v2.3.0: Parser binário de blocos TIFF/EXIF               │
+│  (O gerador de ZIP é próprio, no Módulo 12, sem biblioteca externa)    │
 ├────────────────────────────────────────────────────────────────────────┤
 │  [Módulos JavaScript ES6+]                                             │
 │   ├── Módulo 1: Estado Global da Aplicação                             │
@@ -166,6 +166,7 @@ Três presets profissionais estão disponíveis com um clique:
 ### 5.7 Exportação e Empacotamento ZIP
 - **Baixar Imagem Atual (JPEG):** Renderiza e salva imediatamente a foto selecionada com qualidade de 95%.
 - **Processar e Baixar Todas (ZIP):** Inicia a fila automatizada. A barra de progresso exibe a foto atual e a porcentagem concluída. Ao finalizar, o arquivo compactado `geotag_batch_[timestamp].zip` é descarregado automaticamente, com a mesma qualidade JPEG (95%) do download individual.
+  - Lotes que ultrapassariam 2 GB são divididos em vários arquivos (`geotag_batch_[timestamp]_parte1.zip`, `_parte2.zip`, ...). O navegador pode pedir permissão para baixar vários arquivos.
   - As subpastas de origem são preservadas dentro do ZIP e nomes repetidos recebem sufixo numérico (`geotag_DJI_0001_2.JPG`), sem sobrescrever arquivos.
   - Fotos que não puderem ser processadas são ignoradas sem interromper o lote e informadas ao final.
 - **Preservar metadados originais (EXIF/GPS/XMP):** Ativado por padrão. Copia os blocos EXIF e XMP da foto original para o JPEG exportado. A tag `Orientation` é ajustada para 1 (a rotação já está aplicada nos pixels) e a miniatura EXIF antiga, sem a estampa, deixa de ser referenciada.
@@ -220,12 +221,13 @@ A largura da agulha magnética é calculada aplicando o vetor ortogonal $(-\sin\
 
 Processar dezenas ou centenas de fotografias de 20 a 50 Megapixels pode saturar rapidamente a memória RAM do navegador se os recursos não forem reciclados:
 * **Object URLs Efêmeros:** Cada imagem carregada para o processador é instanciada via `URL.createObjectURL(file)` e imediatamente descartada com `URL.revokeObjectURL(url)` assim que o Blob é inserido no arquivo ZIP.
+* **Pré-visualização em Resolução Reduzida:** Com a foto inteira na tela, a prévia é desenhada com no máximo 2560 px de lado; ao ampliar, a resolução sobe até a total. A exportação é sempre renderizada em resolução total.
 * **Canvas Offscreen Reutilizável:** Durante o lote, um único elemento Canvas oculto é reaproveitado para todas as renderizações, evitando vazamento de contexto WebGL/2D.
 * **Leitura Parcial de Metadados:** Os blocos EXIF e XMP são procurados nos primeiros 256 KB de cada arquivo; a foto inteira só é lida para metadados se nada for encontrado nesse trecho. A leitura tem tempo limite, de modo que um arquivo corrompido não trava a fila.
-* **Compressão DEFLATE:** O JSZip é configurado com compressão de nível 6.
+* **ZIP sem Recompressão:** JPEG já é comprimido, então os arquivos são armazenados no ZIP pelo método STORE, sem gastar CPU com DEFLATE. O pacote é montado como um Blob composto pelas próprias fotos, sem copiar os dados para a memória do JavaScript; apenas o CRC-32 de cada arquivo é calculado.
 
 ### Limitações Conhecidas
-* O ZIP é montado inteiramente em memória antes do download; lotes muito grandes podem exceder a RAM disponível no navegador.
+* As fotos processadas ficam guardadas pelo navegador até o download de cada parte do ZIP; em lotes muito grandes, o navegador pode precisar de espaço em disco temporário equivalente ao tamanho do lote.
 * Perfis de cor ICC da foto original não são copiados (o Canvas exporta em sRGB).
 
 ---
