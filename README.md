@@ -122,7 +122,7 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 
 ### 5.2 Bússola Gráfica Vetorial
 - **Exibir Bússola:** Ativa ou oculta a bússola vetorial na imagem.
-- **Mostrar Ângulo (°):** Adiciona uma etiqueta abaixo da bússola com a indicação precisa do azimute e rumo (ex: `142° SE`).
+- **Mostrar Ângulo (°):** Adiciona uma etiqueta abaixo da bússola com a indicação precisa do azimute e rumo (ex: `142° Sudeste`). Desabilitado por padrão.
 - **Modo da Bússola:**
   - *Automático* (padrão): usa a Seta Norte quando a foto DJI foi tirada com o gimbal apontado para baixo (`GimbalPitchDegree` ≤ -80°) e o Rumo da Câmera nos demais casos.
   - *Seta Norte*: para fotos vistas de cima, cujo topo aponta para o rumo da tomada. A rosa dos ventos gira e a ponta vermelha indica o Norte real na imagem (ex: rumo 90° → Norte à esquerda).
@@ -138,17 +138,27 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 - **Aparência:** Fundo e transparência seguem o padrão do card 5 ou um ajuste individual (veja a seção 5.5). O selo de graus acompanha o fundo da bússola.
 
 ### 5.3 Conteúdo e Telemetria Estampada
-- **Texto Superior:** Campo livre para nome de projeto, cliente, número do lote ou tipo de vistoria (ex: `Vistoria Técnica • Obra 12`).
+- **Texto Superior:** Campo livre para nome de projeto, cliente, número do lote ou tipo de vistoria (ex: `Vistoria Técnica • Obra 12`). Vem em branco por padrão; quando vazio, a linha de título não é estampada.
 - **Modelo do Drone:** Em modo automático, cada foto recebe o equipamento indicado no seu próprio EXIF (lotes com drones diferentes ficam corretos). Ao digitar um texto, ele passa a ser usado em todas as fotos; apagar o campo volta ao modo automático.
-- **Altitude Estampada:** Escolha entre a altitude absoluta (EXIF GPS ou `AbsoluteAltitude` da DJI) e a altura relativa à decolagem (`RelativeAltitude` da DJI, estampada como `ALT REL`). Se a foto não tiver altura relativa, a absoluta é usada.
+- **Altitude Estampada:** Escolha entre a altitude absoluta (EXIF GPS ou `AbsoluteAltitude` da DJI) e a altura relativa à decolagem (`RelativeAltitude` da DJI, estampada como `ALT REL`). Se a foto não tiver altura relativa, a absoluta é usada. O padrão é a altura relativa.
 - **Toggles de Informação:** Marque ou desmarque a exibição de:
   - Coordenadas GPS (Latitude e Longitude em graus decimais com 6 dígitos de precisão).
   - Altitude em metros (exibida junto às coordenadas GPS).
-  - Azimute no texto (direção angular da tomada).
+  - Azimute no texto (direção angular da tomada). Desabilitado por padrão.
   - Identificação do equipamento.
   - Data e hora do disparo da foto.
 
+### Configurações Padrão
+| Item | Padrão |
+| :--- | :--- |
+| Bússola | Superior direita, sem o selo de ângulo |
+| Faixa de texto | Centro inferior, sem texto superior |
+| Azimute no texto | Desabilitado |
+| Altitude estampada | Relativa à decolagem (`ALT REL`) |
+| Logotipo | IBAMA, superior esquerdo, caixa branca a 85% |
+
 ### 5.4 Logotipo Institucional
+- **Logotipo padrão:** o app abre com o logotipo do IBAMA embutido no próprio HTML (base64, sem arquivo externo), no canto superior esquerdo, sobre caixa branca a 85% (ajuste individual do card 4, necessário para as letras escuras "MMA" não sumirem sobre fundo escuro). **Remover Logotipo** retira o logo; **Usar logotipo padrão (IBAMA)** o restaura.
 - Clique em **Carregar Logotipo** e selecione um arquivo `.png` (com transparência recomendada) ou `.jpg`.
 - Defina o quadrante de exibição do logo e a escala proporcional.
 - **Aparência:** Fundo e transparência seguem o padrão do card 5 ou um ajuste individual. A opacidade do logotipo permite usá-lo como marca d'água translúcida.
