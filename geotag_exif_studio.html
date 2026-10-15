@@ -1251,7 +1251,11 @@
                         </label>
                         <label class="checkbox-label">
                             <input id="show-date" type="checkbox" checked>
-                            <span>Data e Hora</span>
+                            <span>Data (DD/MM/AAAA)</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input id="show-time" type="checkbox" checked>
+                            <span>Hora (HH:MM)</span>
                         </label>
                     </div>
 
@@ -1626,6 +1630,7 @@
             const showDroneCheck = document.getElementById('show-drone');
             const showHeadingCheck = document.getElementById('show-heading');
             const showDateCheck = document.getElementById('show-date');
+            const showTimeCheck = document.getElementById('show-time');
             const textPositionSelect = document.getElementById('text-position');
             const altitudeSourceSelect = document.getElementById('altitude-source');
 
@@ -1824,6 +1829,27 @@
                     }
                 }
                 return null;
+            }
+
+            /**
+             * Converte a data/hora do EXIF para o padrão brasileiro.
+             * O EXIF grava "AAAA:MM:DD HH:MM:SS" (DateTimeOriginal/DateTime) ou apenas
+             * "AAAA:MM:DD" (GPSDateStamp); também são aceitos hífens e o separador "T" (ISO 8601).
+             * Exemplo: "2024:05:12 14:33:10" → { date: "12/05/2024", time: "14:33" }.
+             * Se o texto não seguir esse formato, ele é devolvido sem alteração no campo date.
+             *
+             * @param {string} raw Data/hora do EXIF
+             * @returns {{date: string, time: string}}
+             */
+            function formatExifDateTime(raw) {
+                const text = String(raw || '').trim();
+                if (!text) return { date: '', time: '' };
+                const m = text.match(/^(\d{4})[:\-](\d{2})[:\-](\d{2})(?:[ T](\d{2}):(\d{2})(?::\d{2})?)?/);
+                if (!m) return { date: text, time: '' };
+                return {
+                    date: m[3] + '/' + m[2] + '/' + m[1],
+                    time: m[4] !== undefined ? m[4] + ':' + m[5] : ''
+                };
             }
 
             /**
@@ -2394,7 +2420,8 @@
                     exifGimbalPitchDisplay.textContent = 'Sem dado';
                 }
 
-                exifDateDisplay.textContent = activeExif.dateTime || 'Sem Data';
+                const dt = formatExifDateTime(activeExif.dateTime);
+                exifDateDisplay.textContent = [dt.date, dt.time].filter(Boolean).join(' ') || 'Sem Data';
                 
                 const cleanModel = extractCleanDroneModel(activeExif.make, activeExif.model);
                 exifCameraDisplay.textContent = cleanModel || 'Câmera Padrão';
@@ -2680,7 +2707,7 @@
             });
 
             const controls = [
-                customTextInput, droneModelInput, showGpsCheck, showDroneCheck, showHeadingCheck, showDateCheck,
+                customTextInput, droneModelInput, showGpsCheck, showDroneCheck, showHeadingCheck, showDateCheck, showTimeCheck,
                 textPositionSelect, altitudeSourceSelect, logoPositionSelect, textColorInput, bgColorInput, fontScaleInput,
                 logoScaleInput, globalBgCheck, globalBgOpacityInput, globalContentOpacityInput, globalOutlineSelect,
                 showCompassCheck, showCompassLabelCheck, compassPositionSelect, compassModeSelect, compassSizeInput
@@ -3136,8 +3163,14 @@
                     infoParts.push(droneText);
                 }
 
-                if (showDateCheck.checked && exif && exif.dateTime) {
-                    infoParts.push(exif.dateTime);
+                // Data (DD/MM/AAAA) e hora (HH:MM) podem ser exibidas juntas ou separadamente
+                if (exif && exif.dateTime) {
+                    const dt = formatExifDateTime(exif.dateTime);
+                    const dateTimeText = [
+                        showDateCheck.checked ? dt.date : '',
+                        showTimeCheck.checked ? dt.time : ''
+                    ].filter(Boolean).join(' ');
+                    if (dateTimeText) infoParts.push(dateTimeText);
                 }
 
                 if (infoParts.length > 0) {

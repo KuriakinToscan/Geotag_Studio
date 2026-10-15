@@ -146,7 +146,7 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
   - Altitude em metros (exibida junto às coordenadas GPS).
   - Azimute no texto (direção angular da tomada). Desabilitado por padrão.
   - Identificação do equipamento.
-  - Data e hora do disparo da foto.
+  - Data do disparo no formato `DD/MM/AAAA` e hora no formato `HH:MM`, com opções independentes: é possível exibir as duas, só a data, só a hora ou nenhuma.
 
 ### Configurações Padrão
 | Item | Padrão |
