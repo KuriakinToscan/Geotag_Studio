@@ -2328,14 +2328,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                     droneModelInput.dataset.autofilled = "true";
                 }
 
-                // Renderiza o Canvas de visualização e esconde a tela de boas-vindas
-                renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
+                // Enquadra a foto no viewport e renderiza a pré-visualização na resolução adequada
                 placeholderView.style.display = 'none';
                 previewCanvas.style.display = 'block';
-                renderIndicator.style.display = 'none';
-
-                // Ajusta o enquadramento inicial do Canvas no viewport
                 fitCanvasToViewport();
+                renderPreview();
+                renderIndicator.style.display = 'none';
             }
 
             /**
@@ -2417,8 +2415,59 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 if (!currentLoadedImage || previewFrame) return;
                 previewFrame = requestAnimationFrame(() => {
                     previewFrame = 0;
-                    if (currentLoadedImage) renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
+                    renderPreview();
                 });
+            }
+
+            /** Maior dimensão (em pixels) da pré-visualização quando a foto é vista inteira na tela */
+            const PREVIEW_MAX_DIMENSION = 2560;
+
+            /** @type {number} Fator de resolução usado na última renderização da pré-visualização */
+            let previewRenderScale = 1;
+
+            /**
+             * Calcula a resolução necessária para a pré-visualização no zoom atual.
+             * Fotos de 20 a 50 MP são desenhadas com no máximo 2560 px de lado enquanto vistas
+             * inteiras; ao ampliar, a resolução sobe em degraus de 12,5% até a resolução total.
+             *
+             * @returns {number} Fator entre 0 e 1
+             */
+            function desiredPreviewScale() {
+                if (!currentLoadedImage) return 1;
+                const w = currentLoadedImage.naturalWidth || currentLoadedImage.width;
+                const h = currentLoadedImage.naturalHeight || currentLoadedImage.height;
+                const base = Math.min(1, PREVIEW_MAX_DIMENSION / Math.max(w, h));
+                const needed = Math.min(1, Math.ceil(zoomLevel * (window.devicePixelRatio || 1) * 8) / 8);
+                return Math.max(base, needed);
+            }
+
+            /**
+             * Renderiza a pré-visualização na resolução adequada ao zoom. O tamanho CSS do Canvas
+             * permanece igual ao da foto original, então zoom e arrasto não dependem da resolução.
+             */
+            function renderPreview() {
+                if (!currentLoadedImage) return;
+                const w = currentLoadedImage.naturalWidth || currentLoadedImage.width;
+                const h = currentLoadedImage.naturalHeight || currentLoadedImage.height;
+                previewRenderScale = desiredPreviewScale();
+                renderToCanvas(currentLoadedImage, previewCanvas, activeExif, previewRenderScale);
+                previewCanvas.style.width = w + 'px';
+                previewCanvas.style.height = h + 'px';
+            }
+
+            /** @type {number|null} Temporizador do redesenho em maior resolução após o zoom */
+            let zoomRenderTimer = null;
+
+            /**
+             * Após ampliar, redesenha a pré-visualização em resolução maior se a atual não for
+             * suficiente para mostrar os detalhes da foto (aguarda o fim da sequência de zoom).
+             */
+            function ensurePreviewResolution() {
+                if (!currentLoadedImage || desiredPreviewScale() <= previewRenderScale + 1e-6) return;
+                clearTimeout(zoomRenderTimer);
+                zoomRenderTimer = setTimeout(() => {
+                    if (desiredPreviewScale() > previewRenderScale + 1e-6) refreshPreview();
+                }, 150);
             }
 
             controls.forEach(ctrl => {
@@ -2696,18 +2745,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              * @param {HTMLImageElement} img Elemento de imagem fonte
              * @param {HTMLCanvasElement} canvas Elemento Canvas alvo
              * @param {Object} exif Dados EXIF/XMP extraídos
+             * @param {number} [scale=1] Fator de resolução do Canvas em relação à foto. A estampa é
+             *   desenhada nas coordenadas da foto original e reduzida por transformação, de modo que
+             *   a pré-visualização em resolução menor mantém exatamente as mesmas proporções da exportação.
              */
-            function renderToCanvas(img, canvas, exif) {
+            function renderToCanvas(img, canvas, exif, scale) {
                 if (!img || !canvas) return;
+                const s = scale || 1;
 
                 const w = img.naturalWidth || img.width;
                 const h = img.naturalHeight || img.height;
 
-                // Redimensiona o Canvas para corresponder exatamente à resolução em megapixels da foto
-                canvas.width = w;
-                canvas.height = h;
+                // Dimensiona o Canvas: resolução total na exportação, reduzida na pré-visualização
+                canvas.width = Math.max(1, Math.round(w * s));
+                canvas.height = Math.max(1, Math.round(h * s));
 
                 const ctx = canvas.getContext('2d');
+                ctx.setTransform(s, 0, 0, s, 0, 0);
                 ctx.clearRect(0, 0, w, h);
 
                 // Desenha a fotografia original
@@ -2925,6 +2979,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             function applyCanvasTransform() {
                 previewCanvas.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + ')';
                 zoomLevelSpan.textContent = Math.round(zoomLevel * 100) + '%';
+                ensurePreviewResolution();
             }
 
             // Aumento e diminuição de zoom via botões
@@ -3204,17 +3259,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             downloadCurrentBtn.addEventListener('click', async () => {
                 if (!currentLoadedImage) return;
 
-                // Garante que um redesenho ainda agendado seja aplicado antes da exportação
-                if (previewFrame) {
-                    cancelAnimationFrame(previewFrame);
-                    previewFrame = 0;
-                    renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
-                }
-
                 const origName = activeFile ? activeFile.name : 'imagem';
                 const baseName = origName.replace(/\.[^/.]+$/, "");
                 try {
-                    const blob = await withOriginalMetadata(await canvasToJpegBlob(previewCanvas), activeFile);
+                    // A pré-visualização pode estar em resolução reduzida: a exportação é sempre
+                    // renderizada em resolução total num Canvas próprio
+                    const exportCanvas = document.createElement('canvas');
+                    renderToCanvas(currentLoadedImage, exportCanvas, activeExif, 1);
+                    const jpeg = await canvasToJpegBlob(exportCanvas);
+                    exportCanvas.width = 0;
+                    exportCanvas.height = 0;
+                    const blob = await withOriginalMetadata(jpeg, activeFile);
                     downloadBlob(blob, 'geotag_' + baseName + '.jpg');
                     showToast("Download da imagem atual concluído.");
                 } catch (e) {
