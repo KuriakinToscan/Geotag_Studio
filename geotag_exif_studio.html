@@ -618,6 +618,87 @@
             padding-top: 4px;
         }
 
+        /* Título de seção dentro de um card */
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .section-title span {
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        /* Bloco "Aparência": fundo e transparência de cada elemento */
+        .appearance {
+            border-top: 1px dashed var(--border-color);
+            padding-top: 6px;
+        }
+
+        .appearance > summary {
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+            cursor: pointer;
+            list-style-position: inside;
+        }
+
+        .appearance-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .appearance-summary {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .appearance-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+        }
+
+        .appearance-fields[hidden] {
+            display: none;
+        }
+
+        .color-caption {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .appearance-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-link {
+            align-self: flex-start;
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 2px 0;
+        }
+
+        .btn-link:hover {
+            text-decoration: underline;
+        }
+
         .btn-preset {
             flex: 1;
             padding: 4px 6px;
@@ -1129,14 +1210,8 @@
                         <input id="compass-size" type="range" min="6" max="28" value="12">
                     </div>
 
-                    <!-- Slider de Opacidade da Bússola -->
-                    <div class="range-container">
-                        <div class="range-header">
-                            <span>Opacidade da Bússola</span>
-                            <span id="compass-opacity-val">85%</span>
-                        </div>
-                        <input id="compass-opacity" type="range" min="0.1" max="1.0" step="0.05" value="0.85">
-                    </div>
+                    <!-- Aparência (fundo e transparência) da bússola: padrão global ou ajuste individual -->
+                    <div class="appearance-block" data-element="compass"></div>
                 </div>
 
                 <!-- CARD 3: TEXTO, IDENTIFICAÇÃO E TELEMETRIA ESTAMPADA -->
@@ -1199,6 +1274,9 @@
                             <option value="top-right">Superior Direita</option>
                         </select>
                     </div>
+
+                    <!-- Aparência (fundo e transparência) da faixa de texto: padrão global ou ajuste individual -->
+                    <div class="appearance-block" data-element="text"></div>
                 </div>
 
                 <!-- CARD 4: LOGOTIPO INSTITUCIONAL (MARCA D'ÁGUA) -->
@@ -1243,14 +1321,8 @@
                         <input id="logo-scale" type="range" min="4" max="30" value="10">
                     </div>
 
-                    <!-- Opacidade do Logotipo -->
-                    <div class="range-container">
-                        <div class="range-header">
-                            <span>Opacidade do Fundo do Logo</span>
-                            <span id="logo-bg-opacity-val">80%</span>
-                        </div>
-                        <input id="logo-bg-opacity" type="range" min="0" max="1.0" step="0.05" value="0.8">
-                    </div>
+                    <!-- Aparência (fundo e transparência) do logotipo: padrão global ou ajuste individual -->
+                    <div class="appearance-block" data-element="logo"></div>
                 </div>
 
                 <!-- CARD 5: ESTILO VISUAL, TIPOGRAFIA E CORES UNIFICADAS -->
@@ -1274,8 +1346,8 @@
                         </div>
                     </div>
 
-                    <!-- Controles de Cor Unificada (Texto e Fundo) -->
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <!-- Cor do Texto e Escala Tipográfica -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; align-items:end;">
                         <div class="form-group">
                             <label class="form-label" for="text-color">Cor do Texto</label>
                             <div class="color-picker-wrap">
@@ -1283,47 +1355,53 @@
                                 <span id="color-hex" class="color-hex">#FFFFFF</span>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label" for="bg-color">Cor do Fundo</label>
-                            <div class="color-picker-wrap">
-                                <input id="bg-color" type="color" value="#0f172a">
-                                <span id="bg-color-hex" class="color-hex">#0F172A</span>
+                        <div class="range-container">
+                            <div class="range-header">
+                                <span>Tamanho da Fonte</span>
+                                <span id="font-scale-val">100%</span>
                             </div>
+                            <input id="font-scale" type="range" min="60" max="180" value="100">
                         </div>
                     </div>
 
-                    <!-- Escala Tipográfica Proporcional -->
+                    <!-- Fundo e Transparência: padrão aplicado ao texto, à bússola e ao logotipo -->
+                    <div class="section-title">Fundo e Transparência <span>(padrão para todos os elementos)</span></div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; align-items:center;">
+                        <label class="checkbox-label">
+                            <input id="global-bg-check" type="checkbox" checked>
+                            <span>Exibir fundo</span>
+                        </label>
+                        <div class="color-picker-wrap" title="Cor do fundo">
+                            <input id="bg-color" type="color" value="#0f172a">
+                            <span id="bg-color-hex" class="color-hex">#0F172A</span>
+                        </div>
+                    </div>
+
                     <div class="range-container">
                         <div class="range-header">
-                            <span>Tamanho da Fonte</span>
-                            <span id="font-scale-val">100%</span>
+                            <span>Opacidade do Fundo</span>
+                            <span id="global-bg-opacity-val">80%</span>
                         </div>
-                        <input id="font-scale" type="range" min="60" max="180" value="100">
+                        <input id="global-bg-opacity" type="range" min="0" max="1.0" step="0.05" value="0.8">
                     </div>
 
-                    <!-- Opacidade do Texto -->
                     <div class="range-container">
                         <div class="range-header">
-                            <span>Opacidade do Texto</span>
-                            <span id="opacity-val">100%</span>
+                            <span>Opacidade dos Elementos (texto, bússola, logo)</span>
+                            <span id="global-content-opacity-val">100%</span>
                         </div>
-                        <input id="text-opacity" type="range" min="0.2" max="1.0" step="0.05" value="1.0">
+                        <input id="global-content-opacity" type="range" min="0.1" max="1.0" step="0.05" value="1.0">
                     </div>
 
-                    <!-- Opacidade do Fundo da Faixa de Texto -->
-                    <div class="range-container">
-                        <div class="range-header">
-                            <span>Opacidade da Faixa</span>
-                            <span id="text-bg-opacity-val">80%</span>
-                        </div>
-                        <input id="text-bg-opacity" type="range" min="0" max="1.0" step="0.05" value="0.8">
+                    <div class="form-group">
+                        <label class="form-label" for="global-outline">Contorno de Legibilidade</label>
+                        <select id="global-outline" class="form-control">
+                            <option value="auto" selected>Automático (quando sem fundo ou fundo abaixo de 30%)</option>
+                            <option value="always">Sempre</option>
+                            <option value="never">Nunca</option>
+                        </select>
                     </div>
-
-                    <!-- Checkbox de Faixa de Fundo -->
-                    <label class="checkbox-label" style="margin-top:4px;">
-                        <input id="bg-banner-check" type="checkbox" checked>
-                        <span>Exibir Faixa de Fundo Arredondada</span>
-                    </label>
                 </div>
 
             </div>
@@ -1555,8 +1633,6 @@
             const compassModeSelect = document.getElementById('compass-mode');
             const compassSizeInput = document.getElementById('compass-size');
             const compassSizeValSpan = document.getElementById('compass-size-val');
-            const compassOpacityInput = document.getElementById('compass-opacity');
-            const compassOpacityValSpan = document.getElementById('compass-opacity-val');
 
             // Controles de Logotipo
             const logoUpload = document.getElementById('logo-upload');
@@ -1564,8 +1640,6 @@
             const logoPositionSelect = document.getElementById('logo-position');
             const logoScaleInput = document.getElementById('logo-scale');
             const logoScaleValSpan = document.getElementById('logo-scale-val');
-            const logoBgOpacityInput = document.getElementById('logo-bg-opacity');
-            const logoBgOpacityValSpan = document.getElementById('logo-bg-opacity-val');
 
             // Controles de Estilo Visual e Cores
             const textColorInput = document.getElementById('text-color');
@@ -1574,11 +1648,14 @@
             const bgColorHexSpan = document.getElementById('bg-color-hex');
             const fontScaleInput = document.getElementById('font-scale');
             const fontScaleValSpan = document.getElementById('font-scale-val');
-            const textOpacityInput = document.getElementById('text-opacity');
-            const opacityValSpan = document.getElementById('opacity-val');
-            const textBgOpacityInput = document.getElementById('text-bg-opacity');
-            const textBgOpacityValSpan = document.getElementById('text-bg-opacity-val');
-            const bgBannerCheck = document.getElementById('bg-banner-check');
+
+            // Padrão global de fundo e transparência (texto, bússola e logotipo)
+            const globalBgCheck = document.getElementById('global-bg-check');
+            const globalBgOpacityInput = document.getElementById('global-bg-opacity');
+            const globalBgOpacityValSpan = document.getElementById('global-bg-opacity-val');
+            const globalContentOpacityInput = document.getElementById('global-content-opacity');
+            const globalContentOpacityValSpan = document.getElementById('global-content-opacity-val');
+            const globalOutlineSelect = document.getElementById('global-outline');
 
             // Botões de Ação e Lote
             const processBatchBtn = document.getElementById('process-batch-btn');
@@ -2369,6 +2446,200 @@
              * MÓDULO 7: PRESETS RÁPIDOS E EVENTOS DE SINCRONIZAÇÃO VISUAL
              * ====================================================================
              */
+            /**
+             * ====================================================================
+             * APARÊNCIA: FUNDO E TRANSPARÊNCIA DO TEXTO, DA BÚSSOLA E DO LOGOTIPO
+             * ====================================================================
+             * O card 5 define o padrão global (exibir fundo, cor e opacidade do fundo, opacidade
+             * dos elementos e contorno de legibilidade). Cada elemento pode seguir esse padrão ou
+             * ter ajuste individual, que inicia com os valores globais do momento.
+             */
+
+            /** Rótulos de cada elemento usados nos blocos "Aparência" */
+            const APPEARANCE_ELEMENTS = {
+                text:    { content: 'Opacidade do Texto',    hasTextColor: true },
+                compass: { content: 'Opacidade da Bússola',  hasTextColor: false },
+                logo:    { content: 'Opacidade do Logotipo', hasTextColor: false }
+            };
+
+            /** @type {Object<string, Object>} Referências dos controles individuais por elemento */
+            const appearance = {};
+
+            /**
+             * Monta o bloco "Aparência" de um elemento a partir de um único modelo, evitando três
+             * cópias do mesmo HTML.
+             * @param {HTMLElement} container Elemento .appearance-block com data-element
+             */
+            function createAppearanceBlock(container) {
+                const el = container.dataset.element;
+                const cfg = APPEARANCE_ELEMENTS[el];
+                const id = (name) => el + '-' + name;
+
+                container.innerHTML =
+                    '<details class="appearance">' +
+                        '<summary>Aparência (fundo e transparência)</summary>' +
+                        '<div class="appearance-body">' +
+                            '<label class="checkbox-label">' +
+                                '<input id="' + id('override') + '" type="checkbox">' +
+                                '<span>Ajuste individual</span>' +
+                            '</label>' +
+                            '<span id="' + id('summary') + '" class="appearance-summary"></span>' +
+                            '<div id="' + id('fields') + '" class="appearance-fields" hidden>' +
+                                '<div class="appearance-row">' +
+                                    '<label class="checkbox-label">' +
+                                        '<input id="' + id('bg-check') + '" type="checkbox">' +
+                                        '<span>Exibir fundo</span>' +
+                                    '</label>' +
+                                    '<div class="color-picker-wrap" title="Cor do fundo">' +
+                                        '<input id="' + id('bg-color') + '" type="color">' +
+                                        '<span class="color-caption">Cor do fundo</span>' +
+                                    '</div>' +
+                                '</div>' +
+                                (cfg.hasTextColor
+                                    ? '<div class="color-picker-wrap" title="Cor do texto">' +
+                                          '<input id="' + id('text-color') + '" type="color">' +
+                                          '<span class="color-caption">Cor do texto</span>' +
+                                      '</div>'
+                                    : '') +
+                                '<div class="range-container">' +
+                                    '<div class="range-header"><span>Opacidade do Fundo</span><span id="' + id('bg-opacity-val') + '"></span></div>' +
+                                    '<input id="' + id('bg-opacity') + '" type="range" min="0" max="1.0" step="0.05">' +
+                                '</div>' +
+                                '<div class="range-container">' +
+                                    '<div class="range-header"><span>' + cfg.content + '</span><span id="' + id('content-opacity-val') + '"></span></div>' +
+                                    '<input id="' + id('content-opacity') + '" type="range" min="0.1" max="1.0" step="0.05">' +
+                                '</div>' +
+                                '<button id="' + id('reset') + '" type="button" class="btn-link">↺ Voltar ao padrão</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</details>';
+
+                const refs = {
+                    override: document.getElementById(id('override')),
+                    summary: document.getElementById(id('summary')),
+                    fields: document.getElementById(id('fields')),
+                    bgCheck: document.getElementById(id('bg-check')),
+                    bgColor: document.getElementById(id('bg-color')),
+                    textColor: cfg.hasTextColor ? document.getElementById(id('text-color')) : null,
+                    bgOpacity: document.getElementById(id('bg-opacity')),
+                    bgOpacityVal: document.getElementById(id('bg-opacity-val')),
+                    contentOpacity: document.getElementById(id('content-opacity')),
+                    contentOpacityVal: document.getElementById(id('content-opacity-val')),
+                    reset: document.getElementById(id('reset'))
+                };
+                appearance[el] = refs;
+
+                // Ao ativar o ajuste individual, parte dos valores globais do momento
+                refs.override.addEventListener('change', () => {
+                    if (refs.override.checked) {
+                        const g = readGlobalStyle();
+                        refs.bgCheck.checked = g.bgEnabled;
+                        refs.bgColor.value = g.bgColor;
+                        refs.bgOpacity.value = g.bgOpacity;
+                        refs.contentOpacity.value = g.contentOpacity;
+                        if (refs.textColor) refs.textColor.value = g.textColor;
+                    }
+                    refs.fields.hidden = !refs.override.checked;
+                    syncAppearanceLabels();
+                    refreshPreview();
+                });
+
+                refs.reset.addEventListener('click', () => {
+                    refs.override.checked = false;
+                    refs.override.dispatchEvent(new Event('change'));
+                });
+
+                [refs.bgCheck, refs.bgColor, refs.textColor, refs.bgOpacity, refs.contentOpacity]
+                    .filter(Boolean)
+                    .forEach(ctrl => {
+                        ctrl.addEventListener('input', () => {
+                            syncAppearanceLabels();
+                            refreshPreview();
+                        });
+                        ctrl.addEventListener('change', refreshPreview);
+                    });
+            }
+
+            /**
+             * Lê o padrão global de aparência definido no card 5.
+             * @returns {{bgEnabled: boolean, bgColor: string, bgOpacity: number, contentOpacity: number, textColor: string, outline: string}}
+             */
+            function readGlobalStyle() {
+                return {
+                    bgEnabled: globalBgCheck.checked,
+                    bgColor: bgColorInput.value,
+                    bgOpacity: parseFloat(globalBgOpacityInput.value),
+                    contentOpacity: parseFloat(globalContentOpacityInput.value),
+                    textColor: textColorInput.value,
+                    outline: globalOutlineSelect.value
+                };
+            }
+
+            /**
+             * Estilo efetivo de um elemento: o padrão global ou, com ajuste individual, os valores
+             * próprios do elemento. O contorno de legibilidade é sempre o global.
+             *
+             * @param {'text'|'compass'|'logo'} el Elemento
+             * @returns {{bgEnabled: boolean, bgColor: string, bgOpacity: number, contentOpacity: number, textColor: string, outline: string}}
+             */
+            function resolveStyle(el) {
+                const g = readGlobalStyle();
+                const r = appearance[el];
+                if (!r || !r.override.checked) return g;
+                return {
+                    bgEnabled: r.bgCheck.checked,
+                    bgColor: r.bgColor.value,
+                    bgOpacity: parseFloat(r.bgOpacity.value),
+                    contentOpacity: parseFloat(r.contentOpacity.value),
+                    textColor: r.textColor ? r.textColor.value : g.textColor,
+                    outline: g.outline
+                };
+            }
+
+            /** Indica se o fundo do elemento deve ser desenhado */
+            function hasBackground(style) {
+                return style.bgEnabled && style.bgOpacity > 0;
+            }
+
+            /**
+             * Contorno de legibilidade: 'always' liga sempre; 'auto' liga quando o elemento está
+             * sem fundo ou com fundo abaixo de 30%, situação em que o texto pode sumir na foto.
+             */
+            function needsOutline(style) {
+                if (style.outline === 'always') return true;
+                if (style.outline === 'never') return false;
+                return !hasBackground(style) || style.bgOpacity < 0.3;
+            }
+
+            /**
+             * Cor de contraste para o contorno: preto para cores claras e branco para cores escuras.
+             * @param {string} hex Cor de referência (#RRGGBB)
+             * @returns {string}
+             */
+            function contrastColor(hex) {
+                const num = parseInt(hex.replace('#', ''), 16);
+                const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+                return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#000000' : '#ffffff';
+            }
+
+            /** Atualiza os valores exibidos e o resumo de cada bloco "Aparência" */
+            function syncAppearanceLabels() {
+                const pct = (v) => Math.round(parseFloat(v) * 100) + '%';
+                const g = readGlobalStyle();
+                Object.keys(appearance).forEach(el => {
+                    const r = appearance[el];
+                    r.bgOpacityVal.textContent = pct(r.bgOpacity.value);
+                    r.contentOpacityVal.textContent = pct(r.contentOpacity.value);
+                    r.summary.textContent = r.override.checked
+                        ? 'Usando ajuste individual.'
+                        : 'Seguindo o padrão: ' + (hasBackground(g) ? 'fundo ' + pct(g.bgOpacity) : 'sem fundo') +
+                          ', elemento ' + pct(g.contentOpacity) + '.';
+                });
+            }
+
+            document.querySelectorAll('.appearance-block').forEach(createAppearanceBlock);
+            syncAppearanceLabels();
+
             // Registrado antes dos demais ouvintes para que o redesenho já use o modo correto.
             // Texto digitado pelo usuário desativa o preenchimento automático do equipamento;
             // apagar o campo volta ao modo automático (modelo do EXIF de cada foto)
@@ -2379,8 +2650,8 @@
             const controls = [
                 customTextInput, droneModelInput, showGpsCheck, showDroneCheck, showHeadingCheck, showDateCheck,
                 textPositionSelect, altitudeSourceSelect, logoPositionSelect, textColorInput, bgColorInput, fontScaleInput,
-                textOpacityInput, textBgOpacityInput, logoBgOpacityInput, logoScaleInput, bgBannerCheck,
-                showCompassCheck, showCompassLabelCheck, compassPositionSelect, compassModeSelect, compassSizeInput, compassOpacityInput
+                logoScaleInput, globalBgCheck, globalBgOpacityInput, globalContentOpacityInput, globalOutlineSelect,
+                showCompassCheck, showCompassLabelCheck, compassPositionSelect, compassModeSelect, compassSizeInput
             ];
 
             /**
@@ -2391,12 +2662,11 @@
                 colorHexSpan.textContent = textColorInput.value.toUpperCase();
                 bgColorHexSpan.textContent = bgColorInput.value.toUpperCase();
                 fontScaleValSpan.textContent = fontScaleInput.value + '%';
-                opacityValSpan.textContent = pct(textOpacityInput.value);
-                textBgOpacityValSpan.textContent = pct(textBgOpacityInput.value);
-                logoBgOpacityValSpan.textContent = pct(logoBgOpacityInput.value);
+                globalBgOpacityValSpan.textContent = pct(globalBgOpacityInput.value);
+                globalContentOpacityValSpan.textContent = pct(globalContentOpacityInput.value);
                 logoScaleValSpan.textContent = logoScaleInput.value + '%';
                 compassSizeValSpan.textContent = compassSizeInput.value + '%';
-                compassOpacityValSpan.textContent = pct(compassOpacityInput.value);
+                syncAppearanceLabels();
             }
 
             /** @type {number} Quadro de animação pendente para o redesenho da pré-visualização */
@@ -2475,26 +2745,25 @@
             });
 
             /**
-             * Presets visuais rápidos: valores aplicados aos controles de cor e opacidade.
+             * Presets visuais rápidos: valores aplicados ao padrão global de cores e opacidade.
+             * Elementos com ajuste individual mantêm seus valores (use "Voltar ao padrão" no card).
              * - Dark Pro: fundo grafite escuro com tipografia branca de alto contraste
              * - Light Clean: fundo branco translúcido com tipografia azul petróleo
              * - Segurança: fundo preto de alta opacidade com texto amarelo vivo
              */
             const PRESETS = {
-                dark:   { name: 'Dark Pro',    text: '#ffffff', bg: '#0f172a', textOpacity: 1.0, bannerOpacity: 0.8,  logoBgOpacity: 0.8,  compassOpacity: 0.85 },
-                light:  { name: 'Light Clean', text: '#0f172a', bg: '#ffffff', textOpacity: 1.0, bannerOpacity: 0.85, logoBgOpacity: 0.85, compassOpacity: 0.9 },
-                safety: { name: 'Segurança',   text: '#facc15', bg: '#000000', textOpacity: 1.0, bannerOpacity: 0.9,  logoBgOpacity: 0.9,  compassOpacity: 0.95 }
+                dark:   { name: 'Dark Pro',    text: '#ffffff', bg: '#0f172a', bgOpacity: 0.8,  contentOpacity: 1.0 },
+                light:  { name: 'Light Clean', text: '#0f172a', bg: '#ffffff', bgOpacity: 0.85, contentOpacity: 1.0 },
+                safety: { name: 'Segurança',   text: '#facc15', bg: '#000000', bgOpacity: 0.9,  contentOpacity: 1.0 }
             };
 
             function applyPreset(key) {
                 const p = PRESETS[key];
                 textColorInput.value = p.text;
                 bgColorInput.value = p.bg;
-                textOpacityInput.value = p.textOpacity;
-                textBgOpacityInput.value = p.bannerOpacity;
-                logoBgOpacityInput.value = p.logoBgOpacity;
-                compassOpacityInput.value = p.compassOpacity;
-                bgBannerCheck.checked = true;
+                globalBgOpacityInput.value = p.bgOpacity;
+                globalContentOpacityInput.value = p.contentOpacity;
+                globalBgCheck.checked = true;
                 syncLabels();
                 refreshPreview();
                 showToast('Preset ' + p.name + ' aplicado.');
@@ -2596,22 +2865,34 @@
                     cy = h - radius - margin;
                 }
 
-                const opacity = parseFloat(compassOpacityInput.value);
-                const unifiedBgColor = bgColorInput.value;
-                const textColor = textColorInput.value;
+                // Fundo e transparência: padrão global ou ajuste individual da bússola
+                const style = resolveStyle('compass');
+                const co = style.contentOpacity;
+                const textColor = style.textColor;
+                const outline = needsOutline(style);
+                const outlineColor = contrastColor(textColor);
 
                 ctx.save();
 
-                // 1. Mostrador Circular de Fundo (Disco translúcido)
+                // 1. Mostrador Circular de Fundo (Disco translúcido, opcional)
                 ctx.beginPath();
                 ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                ctx.fillStyle = hexToRGBA(unifiedBgColor, opacity);
-                ctx.fill();
+                if (hasBackground(style)) {
+                    ctx.fillStyle = hexToRGBA(style.bgColor, style.bgOpacity);
+                    ctx.fill();
+                }
 
-                // Borda de acabamento do mostrador
-                ctx.lineWidth = Math.max(2, size * 0.025);
+                // Borda de acabamento do mostrador (com contorno de legibilidade, se ativo)
+                const borderWidth = Math.max(2, size * 0.025);
+                if (outline) {
+                    ctx.lineWidth = borderWidth * 2.2;
+                    ctx.strokeStyle = outlineColor;
+                    ctx.globalAlpha = 0.6 * co;
+                    ctx.stroke();
+                }
+                ctx.lineWidth = borderWidth;
                 ctx.strokeStyle = textColor;
-                ctx.globalAlpha = 0.95;
+                ctx.globalAlpha = 0.95 * co;
                 ctx.stroke();
 
                 // Rotação da rosa dos ventos e azimute (a partir do topo da imagem) da ponta vermelha
@@ -2627,7 +2908,7 @@
                 // 2. Mira em Cruz Suave Central (acompanha a rotação da rosa)
                 ctx.beginPath();
                 ctx.strokeStyle = textColor;
-                ctx.globalAlpha = 0.35;
+                ctx.globalAlpha = 0.35 * co;
                 ctx.lineWidth = Math.max(1, size * 0.012);
                 [0, 90].forEach(base => {
                     const [x1, y1] = polar(base + roseRotation, radius * 0.62);
@@ -2638,14 +2919,19 @@
                 ctx.stroke();
 
                 // 3. Marcações dos 4 Pontos Cardeais em Português (N, S, L, O)
-                ctx.globalAlpha = 1.0;
+                const letterSize = Math.round(size * 0.13);
+                ctx.globalAlpha = co;
                 ctx.fillStyle = textColor;
+                ctx.strokeStyle = outlineColor;
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = Math.max(2, letterSize * 0.14);
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.font = 'bold ' + Math.round(size * 0.13) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.font = 'bold ' + letterSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
                 [['N', 0], ['L', 90], ['S', 180], ['O', 270]].forEach(([letter, base]) => {
                     const [lx, ly] = polar(base + roseRotation, radius * 0.77);
+                    if (outline) ctx.strokeText(letter, lx, ly);
                     ctx.fillText(letter, lx, ly);
                 });
 
@@ -2654,6 +2940,10 @@
                 const side = Math.max(4, size * 0.065);
                 const px = -Math.sin(angleRad);
                 const py = Math.cos(angleRad);
+                ctx.globalAlpha = co;
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = Math.max(1, size * 0.012);
+                ctx.strokeStyle = 'rgba(15,23,42,0.85)';
 
                 // Ponta Norte (Vermelho vivo internacional de agulha magnética)
                 const tipX = cx + Math.cos(angleRad) * radius * 0.66;
@@ -2668,6 +2958,7 @@
                 ctx.closePath();
                 ctx.fillStyle = '#ef4444';
                 ctx.fill();
+                if (outline) ctx.stroke();
 
                 // Ponta Sul (Branco/Cinza para contraste neutro)
                 const tipSouthX = cx - Math.cos(angleRad) * radius * 0.66;
@@ -2682,6 +2973,7 @@
                 ctx.closePath();
                 ctx.fillStyle = '#f1f5f9';
                 ctx.fill();
+                if (outline) ctx.stroke();
 
                 // Pivô Central de Latão/Metal
                 ctx.beginPath();
@@ -2704,21 +2996,30 @@
                     const badgeX = cx - badgeW / 2;
                     const badgeY = cy + radius + 6;
 
-                    // Fundo arredondado do selo
-                    ctx.fillStyle = hexToRGBA(unifiedBgColor, Math.min(1.0, opacity + 0.15));
-                    drawRoundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4);
+                    // Fundo arredondado do selo (segue o fundo da bússola, um pouco mais opaco)
+                    if (hasBackground(style)) {
+                        ctx.globalAlpha = 1.0;
+                        ctx.fillStyle = hexToRGBA(style.bgColor, Math.min(1.0, style.bgOpacity + 0.15));
+                        drawRoundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4);
 
-                    // Borda sutil
-                    ctx.strokeStyle = textColor;
-                    ctx.lineWidth = 1;
-                    ctx.globalAlpha = 0.5;
-                    ctx.stroke();
+                        // Borda sutil
+                        ctx.strokeStyle = textColor;
+                        ctx.lineWidth = 1;
+                        ctx.globalAlpha = 0.5 * co;
+                        ctx.stroke();
+                    }
 
                     // Texto do selo
-                    ctx.globalAlpha = 1.0;
+                    ctx.globalAlpha = co;
                     ctx.fillStyle = textColor;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
+                    if (outline) {
+                        ctx.strokeStyle = outlineColor;
+                        ctx.lineJoin = 'round';
+                        ctx.lineWidth = Math.max(2, badgeFontSize * 0.2);
+                        ctx.strokeText(badgeText, cx, badgeY + badgeH / 2);
+                    }
                     ctx.fillText(badgeText, cx, badgeY + badgeH / 2);
                 }
 
@@ -2859,21 +3160,28 @@
                     }
 
                     // Desenha o fundo da faixa de texto
-                    if (bgBannerCheck.checked) {
-                        const bgOpacity = parseFloat(textBgOpacityInput.value);
-                        ctx.fillStyle = hexToRGBA(bgColorInput.value, bgOpacity);
+                    // Fundo e transparência: padrão global ou ajuste individual da faixa de texto
+                    const style = resolveStyle('text');
+                    const outline = needsOutline(style);
+                    if (hasBackground(style)) {
+                        ctx.fillStyle = hexToRGBA(style.bgColor, style.bgOpacity);
                         drawRoundRect(ctx, bannerX, bannerY, bannerW, bannerH, Math.round(baseFontSize * 0.5));
                     }
 
                     // Renderiza cada linha de texto com tipografia nítida
-                    const textOpacity = parseFloat(textOpacityInput.value);
-                    ctx.fillStyle = hexToRGBA(textColorInput.value, textOpacity);
+                    ctx.fillStyle = hexToRGBA(style.textColor, style.contentOpacity);
+                    ctx.strokeStyle = hexToRGBA(contrastColor(style.textColor), style.contentOpacity);
+                    ctx.lineJoin = 'round';
                     ctx.textBaseline = 'top';
                     ctx.textAlign = 'left';
 
                     let curY = bannerY + padY;
                     lines.forEach(l => {
                         ctx.font = (l.bold ? 'bold ' : '') + l.size + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        if (outline) {
+                            ctx.lineWidth = Math.max(2, l.size * 0.14);
+                            ctx.strokeText(l.text, bannerX + padX, curY);
+                        }
                         ctx.fillText(l.text, bannerX + padX, curY);
                         curY += l.size + lineSpacing;
                     });
@@ -2926,13 +3234,15 @@
                         ly = h - logoBoxH - logoMargin;
                     }
 
-                    // Fundo arredondado do logotipo
-                    const logoBgOpacity = parseFloat(logoBgOpacityInput.value);
-                    if (logoBgOpacity > 0) {
-                        ctx.fillStyle = hexToRGBA(bgColorInput.value, logoBgOpacity);
+                                        // Fundo e transparência: padrão global ou ajuste individual do logotipo
+                    const style = resolveStyle('logo');
+                    if (hasBackground(style)) {
+                        ctx.fillStyle = hexToRGBA(style.bgColor, style.bgOpacity);
                         drawRoundRect(ctx, lx, ly, logoBoxW, logoBoxH, Math.round(lw * 0.08));
                     }
 
+                    // Opacidade do logotipo (efeito marca d'água)
+                    ctx.globalAlpha = style.contentOpacity;
                     ctx.drawImage(logoImage, lx + logoPad, ly + logoPad, lw, lh);
                     ctx.restore();
                 }

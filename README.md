@@ -134,7 +134,8 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
   - *Inferior Esquerda*
   - *Inferior Centro*
   - *Inferior Direita*
-- **Tamanho e Opacidade:** Ajuste o diâmetro da bússola (% proporcional à resolução) e a transparência do disco de fundo.
+- **Tamanho:** Ajuste o diâmetro da bússola (% proporcional à resolução).
+- **Aparência:** Fundo e transparência seguem o padrão do card 5 ou um ajuste individual (veja a seção 5.5). O selo de graus acompanha o fundo da bússola.
 
 ### 5.3 Conteúdo e Telemetria Estampada
 - **Texto Superior:** Campo livre para nome de projeto, cliente, número do lote ou tipo de vistoria (ex: `Vistoria Técnica • Obra 12`).
@@ -149,14 +150,24 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 
 ### 5.4 Logotipo Institucional
 - Clique em **Carregar Logotipo** e selecione um arquivo `.png` (com transparência recomendada) ou `.jpg`.
-- Defina o quadrante de exibição do logo, escala proporcional e a opacidade da caixa de fundo.
+- Defina o quadrante de exibição do logo e a escala proporcional.
+- **Aparência:** Fundo e transparência seguem o padrão do card 5 ou um ajuste individual. A opacidade do logotipo permite usá-lo como marca d'água translúcida.
 
 ### 5.5 Estilização e Presets Rápidos
 Três presets profissionais estão disponíveis com um clique:
 - 🌑 **Dark Pro:** Fundo grafite profundo com tipografia branca de alto contraste.
 - ☀️ **Light Clean:** Fundo branco semitransparente com texto azul petróleo e estética limpa.
 - ⚠️ **Segurança:** Fundo preto opaco com texto amarelo internacional (padrão de segurança do trabalho e laudos periciais).
-- **Controles Personalizados:** Ajuste fino de cores de texto e fundo, tamanho da fonte, opacidade do texto e opacidade da faixa.
+- **Controles Personalizados:** Cor do texto e tamanho da fonte.
+
+#### Fundo e Transparência
+O bloco **Fundo e Transparência** do card 5 é o padrão aplicado ao texto, à bússola e ao logotipo de uma só vez:
+- **Exibir fundo** e **Cor do fundo**: liga ou retira o fundo (faixa do texto, disco e selo da bússola, caixa do logo).
+- **Opacidade do Fundo**: transparência do fundo, de 0% a 100%.
+- **Opacidade dos Elementos**: transparência do conteúdo (letras do texto; borda, letras e agulha da bússola; imagem do logo).
+- **Contorno de Legibilidade**: contorno na cor de contraste ao redor das letras. No modo *Automático* (padrão) ele aparece quando o elemento está sem fundo ou com fundo abaixo de 30%; também pode ser *Sempre* ou *Nunca*.
+
+Cada elemento tem, no próprio card, o bloco **Aparência** com a opção **Ajuste individual**. Marcada, ela libera fundo, cor do fundo, opacidade do fundo e opacidade do conteúdo próprios (e a cor do texto, no caso da faixa), começando pelos valores globais do momento. **Voltar ao padrão** desfaz o ajuste. Os presets alteram apenas o padrão global; ajustes individuais são mantidos.
 
 ### 5.6 Visualizador Interativo (Zoom & Pan)
 - **Roda do Mouse (Scroll):** Amplie ou reduza o zoom dinamicamente.
