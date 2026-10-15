@@ -155,10 +155,10 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 | Faixa de texto | Centro inferior, sem texto superior |
 | Azimute no texto | Desabilitado |
 | Altitude estampada | Relativa à decolagem (`ALT REL`) |
-| Logotipo | IBAMA, superior esquerdo, caixa branca a 85% |
+| Logotipo | IBAMA, superior esquerdo, mesmo fundo dos demais elementos |
 
 ### 5.4 Logotipo Institucional
-- **Logotipo padrão:** o app abre com o logotipo do IBAMA embutido no próprio HTML (base64, sem arquivo externo), no canto superior esquerdo, sobre caixa branca a 85% (ajuste individual do card 4, necessário para as letras escuras "MMA" não sumirem sobre fundo escuro). **Remover Logotipo** retira o logo; **Usar logotipo padrão (IBAMA)** o restaura.
+- **Logotipo padrão:** o app abre com o logotipo do IBAMA embutido no próprio HTML (base64, sem arquivo externo), no canto superior esquerdo, com o mesmo fundo da bússola e da faixa de texto. Sobre fundo escuro é usada automaticamente a versão negativa do logo, com as letras "MMA" em branco; sobre fundo claro ou sem fundo, a versão original. **Remover Logotipo** retira o logo; **Usar logotipo padrão (IBAMA)** o restaura.
 - Clique em **Carregar Logotipo** e selecione um arquivo `.png` (com transparência recomendada) ou `.jpg`.
 - Defina o quadrante de exibição do logo e a escala proporcional.
 - **Aparência:** Fundo e transparência seguem o padrão do card 5 ou um ajuste individual. A opacidade do logotipo permite usá-lo como marca d'água translúcida.
