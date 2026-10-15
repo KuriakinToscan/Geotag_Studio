@@ -1035,6 +1035,10 @@
                             <span id="exif-alt" class="telemetry-val">N/D</span>
                         </div>
                         <div class="telemetry-row">
+                            <span class="telemetry-label">Altura Relativa:</span>
+                            <span id="exif-rel-alt" class="telemetry-val">N/D</span>
+                        </div>
+                        <div class="telemetry-row">
                             <span class="telemetry-label">Azimute / Direção:</span>
                             <span id="exif-alt-heading" class="telemetry-val">N/D</span>
                         </div>
@@ -1148,6 +1152,14 @@
                             <input id="show-date" type="checkbox" checked>
                             <span>Data e Hora</span>
                         </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="altitude-source">Altitude Estampada</label>
+                        <select id="altitude-source" class="form-control">
+                            <option value="absolute" selected>Absoluta (EXIF GPS / DJI AbsoluteAltitude)</option>
+                            <option value="relative">Relativa à decolagem (DJI RelativeAltitude)</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -1504,6 +1516,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             const showHeadingCheck = document.getElementById('show-heading');
             const showDateCheck = document.getElementById('show-date');
             const textPositionSelect = document.getElementById('text-position');
+            const altitudeSourceSelect = document.getElementById('altitude-source');
 
             // Controles de Bússola Vetorial
             const showCompassCheck = document.getElementById('show-compass-check');
@@ -1554,6 +1567,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             // Exibições de Telemetria no Painel Lateral
             const exifGpsDisplay = document.getElementById('exif-gps');
             const exifAltDisplay = document.getElementById('exif-alt');
+            const exifRelAltDisplay = document.getElementById('exif-rel-alt');
             const exifAltHeadingDisplay = document.getElementById('exif-alt-heading');
             const exifHeadingSourceDisplay = document.getElementById('exif-heading-source');
             const exifDateDisplay = document.getElementById('exif-date');
@@ -1670,13 +1684,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              */
             function extractXmpNumber(text, names) {
                 if (!text) return null;
+                // Número decimal com sinal opcional e expoente opcional (ex: +12.30, -0.5, 1.2e-5)
+                const num = '([+-]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?)';
                 for (let i = 0; i < names.length; i++) {
-                    const n = names[i];
+                    // Escapa o nome para uso literal e exige fronteira de palavra antes dele
+                    const n = names[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     const patterns = [
-                        // Padrão 1: Atributo XML drone-dji:Nome="123.45" ou Nome="123.45"
-                        new RegExp('(?:drone-dji:)?' + n + '\s*=\s*["\']([+-]?[0-9.]+)["\']', 'i'),
+                        // Padrão 1: Atributo XML drone-dji:Nome="123.45" ou Nome = "123.45"
+                        new RegExp('(?:^|[\\s:<])' + n + '\\s*=\\s*["\']\\s*' + num + '\\s*["\']', 'i'),
                         // Padrão 2: Elemento XML <drone-dji:Nome>123.45</drone-dji:Nome>
-                        new RegExp('<(?:drone-dji:)?' + n + '>([+-]?[0-9.]+)</', 'i')
+                        new RegExp('<(?:[\\w-]+:)?' + n + '>\\s*' + num + '\\s*</', 'i')
                     ];
                     for (let p = 0; p < patterns.length; p++) {
                         const m = text.match(patterns[p]);
@@ -1686,6 +1703,25 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                         }
                     }
                 }
+                return null;
+            }
+
+            /**
+             * Seleciona a altitude a ser estampada conforme a preferência do usuário.
+             * Se a altura relativa for escolhida mas não existir na foto, recorre à absoluta
+             * (o rótulo estampado indica qual das duas foi usada).
+             *
+             * @param {Object|null} exif Metadados extraídos
+             * @returns {{label: string, value: number}|null}
+             */
+            function pickStampAltitude(exif) {
+                if (!exif) return null;
+                const hasAbs = exif.altitude !== null && exif.altitude !== undefined && !isNaN(exif.altitude);
+                const hasRel = exif.relativeAltitude !== null && exif.relativeAltitude !== undefined && !isNaN(exif.relativeAltitude);
+                if (altitudeSourceSelect.value === 'relative' && hasRel) {
+                    return { label: 'ALT REL', value: exif.relativeAltitude };
+                }
+                if (hasAbs) return { label: 'ALT', value: exif.altitude };
                 return null;
             }
 
@@ -1724,29 +1760,28 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             }
 
             /**
-             * Normalizador inteligente para modelos de câmeras e drones.
-             * Remove repetições redundantes (ex: "DJI DJI FC3582" vira "DJI FC3582") e formata
-             * nomes de modelos consagrados como Mavic, Mini, Phantom e Matrice.
+             * Normalizador para nomes de câmeras e drones.
+             * Combina fabricante e modelo sem repetições (ex: Make "DJI" + Model "FC3582" vira
+             * "DJI FC3582"; Make "NIKON CORPORATION" + Model "NIKON D850" vira "NIKON D850").
+             * Fabricantes com razão social composta são reduzidos à primeira palavra
+             * (ex: "Autel Robotics" + "XT705" vira "Autel XT705").
              * 
              * @param {string} make Fabricante extraído do EXIF
              * @param {string} model Modelo extraído do EXIF
              * @returns {string} String limpa e profissional
              */
             function extractCleanDroneModel(make, model) {
-                const mk = (make || '').trim();
-                const md = (model || '').trim();
-                let combined = (mk + ' ' + md).trim();
-                const upper = combined.toUpperCase();
+                const mk = String(make || '').replace(/\s+/g, ' ').trim();
+                const md = String(model || '').replace(/\s+/g, ' ').trim();
+                if (!mk) return md;
+                if (!md) return mk;
 
-                if (upper.includes("DJI") || upper.includes("MAVIC") || upper.includes("AIR") || 
-                    upper.includes("MINI") || upper.includes("MATRICE") || upper.includes("ZENMUSE") || 
-                    upper.includes("PHANTOM") || upper.includes("AVATA") || upper.includes("INSPIRE")) {
-                    return upper.includes("DJI") ? md : ('DJI ' + md);
+                const brand = mk.split(' ')[0];
+                const mdUpper = md.toUpperCase();
+                if (mdUpper.startsWith(mk.toUpperCase()) || mdUpper.startsWith(brand.toUpperCase())) {
+                    return md;
                 }
-                if (upper.includes("AUTEL")) {
-                    return upper.includes("AUTEL") ? md : ('Autel ' + md);
-                }
-                return combined || '';
+                return brand + ' ' + md;
             }
 
             /**
@@ -1912,6 +1947,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             function resetExifTelemetryDisplays() {
                 exifGpsDisplay.textContent = 'N/D';
                 exifAltDisplay.textContent = 'N/D';
+                exifRelAltDisplay.textContent = 'N/D';
                 exifAltHeadingDisplay.textContent = 'N/D';
                 exifHeadingSourceDisplay.textContent = 'N/D';
                 exifDateDisplay.textContent = 'N/D';
@@ -1949,8 +1985,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
                         // 2. Extração de Altitude (EXIF padrão)
                         let alt = null;
-                        if (tags.GPSAltitude !== undefined) {
+                        if (tags.GPSAltitude !== undefined && tags.GPSAltitude !== null) {
                             alt = Number(tags.GPSAltitude);
+                            // GPSAltitudeRef = 1 indica altitude abaixo do nível do mar
+                            if (Number(tags.GPSAltitudeRef) === 1) alt = -alt;
                         }
 
                         // 3. Extração de Data e Hora
@@ -1972,6 +2010,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
                         // Prioridade 2 e 3: Inspeção dos Blocos XMP Embutidos (Drones DJI)
                         let xmpAlt = null;
+                        let relAlt = null;
                         try {
                             // Lê os primeiros 128 KB da imagem para localizar o pacote XML de XMP
                             const slice = file.slice(0, 131072);
@@ -1983,6 +2022,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                                 // FlightYawDegree é o azimute da fuselagem/nariz do drone
                                 const flightYaw = extractXmpNumber(text, ['FlightYawDegree']);
                                 const absAlt = extractXmpNumber(text, ['AbsoluteAltitude']);
+                                // RelativeAltitude é a altura de voo em relação ao ponto de decolagem
+                                relAlt = extractXmpNumber(text, ['RelativeAltitude']);
 
                                 if (gimbalYaw !== null) {
                                     heading = normAngle(gimbalYaw);
@@ -2019,6 +2060,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                             latitude: lat,
                             longitude: lon,
                             altitude: alt,
+                            relativeAltitude: relAlt,
                             dateTime: dateStr,
                             make: make,
                             model: model,
@@ -2068,6 +2110,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                         exifAltDisplay.textContent = activeExif.altitude.toFixed(1) + ' m';
                     } else {
                         exifAltDisplay.textContent = 'Sem Altitude';
+                    }
+
+                    if (activeExif.relativeAltitude !== null && !isNaN(activeExif.relativeAltitude)) {
+                        exifRelAltDisplay.textContent = activeExif.relativeAltitude.toFixed(1) + ' m';
+                    } else {
+                        exifRelAltDisplay.textContent = 'Sem Altura Relativa';
                     }
 
                     if (activeExif.heading !== null && !isNaN(activeExif.heading)) {
@@ -2141,7 +2189,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              */
             const controls = [
                 customTextInput, droneModelInput, showGpsCheck, showDroneCheck, showHeadingCheck, showDateCheck,
-                textPositionSelect, logoPositionSelect, textColorInput, bgColorInput, fontScaleInput,
+                textPositionSelect, altitudeSourceSelect, logoPositionSelect, textColorInput, bgColorInput, fontScaleInput,
                 textOpacityInput, textBgOpacityInput, logoBgOpacityInput, logoScaleInput, bgBannerCheck,
                 showCompassCheck, showCompassLabelCheck, compassPositionSelect, compassSizeInput, compassOpacityInput
             ];
@@ -2447,8 +2495,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 const techParts = [];
                 if (showGpsCheck.checked && exif && exif.latitude !== null && exif.longitude !== null) {
                     let gpsStr = 'LAT: ' + exif.latitude.toFixed(6) + '°  LON: ' + exif.longitude.toFixed(6) + '°';
-                    if (exif.altitude !== null && !isNaN(exif.altitude)) {
-                        gpsStr += '  ALT: ' + exif.altitude.toFixed(1) + 'm';
+                    const stampAlt = pickStampAltitude(exif);
+                    if (stampAlt) {
+                        gpsStr += '  ' + stampAlt.label + ': ' + stampAlt.value.toFixed(1) + 'm';
                     }
                     techParts.push(gpsStr);
                 }
