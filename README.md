@@ -26,9 +26,9 @@
 
 ## 1. Visão Geral
 
-O **Geotag & EXIF Studio** é uma ferramenta profissional de engenharia desenvolvida para estampar automaticamente parâmetros técnicos (coordenadas geográficas GPS, altitude ortométrica/absoluta, azimute da tomada, data/hora e identificação do equipamento) diretamente sobre fotografias aéreas obtidas por drones (DJI, Autel, etc.) ou levantamentos de campo.
+O **Geotag & EXIF Studio** é uma ferramenta profissional de engenharia desenvolvida para estampar automaticamente parâmetros técnicos (coordenadas geográficas GPS, altitude absoluta ou relativa à decolagem, azimute da tomada, data/hora e identificação do equipamento) diretamente sobre fotografias aéreas obtidas por drones (DJI, Autel, etc.) ou levantamentos de campo.
 
-A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e autônomo): todo o código HTML5, estilos CSS nativos e lógica JavaScript estão consolidados no arquivo [`geotag_exif_studio.html`](file:///d:/Exif_Studio/geotag_exif_studio.html), sem nenhuma dependência de conexões com servidores externos ou instaladores complexos.
+A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e autônomo): todo o código HTML5, estilos CSS nativos e lógica JavaScript estão consolidados no arquivo [`geotag_exif_studio.html`](geotag_exif_studio.html), sem nenhuma dependência de conexões com servidores externos ou instaladores complexos.
 
 ---
 
@@ -41,11 +41,11 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 * 📍 **Posicionamento em 6 Quadrantes:**
   Liberdade total para posicionar a bússola em qualquer canto ou centro da fotografia: *Superior Esquerda*, *Superior Centro*, *Superior Direita*, *Inferior Esquerda*, *Inferior Centro* ou *Inferior Direita*.
 * 🛰️ **Suporte Avançado a Drones DJI (EXIF + XMP):**
-  Extração de ângulo de rotação do gimbal (`GimbalYawDegree`), rumo da fuselagem (`FlightYawDegree`) e altitude de voo (`AbsoluteAltitude`), convertendo valores contínuos para os 8 rumos cardeais/colaterais em português (`Norte`, `Nordeste`, `Leste`, `Sudeste`, `Sul`, `Sudoeste`, `Oeste`, `Noroeste`).
+  Extração de ângulo de rotação do gimbal (`GimbalYawDegree`), rumo da fuselagem (`FlightYawDegree`) altitude absoluta (`AbsoluteAltitude`) e altura de voo relativa à decolagem (`RelativeAltitude`), convertendo valores contínuos para os 8 rumos cardeais/colaterais em português (`Norte`, `Nordeste`, `Leste`, `Sudeste`, `Sul`, `Sudoeste`, `Oeste`, `Noroeste`).
 * 🏷️ **Faixa de Texto Customizável:**
   Faixa semitransparente com cantos arredondados contendo dados organizados em camadas: identificação de projeto/obra, telemetria (LAT, LON, ALT, DIR), equipamento e carimbo de data/hora.
 * 🛡️ **Logotipo / Marca d'Água:**
-  Suporte a logotipos corporativos em formato PNG transparente ou JPEG, com escala proporcional e controle de opacidade.
+  Suporte a logotipos corporativos em formato PNG transparente ou JPEG, com escala proporcional e controle de opacidade da caixa de fundo.
 * ⚡ **Processamento em Lote de Alto Desempenho:**
   Capacidade de processar centenas de fotos sequencialmente, com acompanhamento de progresso em tempo real, opção de interrupção imediata e empacotamento compactado em arquivo `.zip` via motor DEFLATE.
 * 🔍 **Viewport com Zoom & Pan Suave:**
@@ -76,16 +76,18 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 │   └── JSZip v3.10.1: Criação e compressão assíncrona de arquivos ZIP   │
 ├────────────────────────────────────────────────────────────────────────┤
 │  [Módulos JavaScript ES6+]                                             │
-│   ├── Módulo 1: Estado Global Reativo (Single Source of Truth)         │
+│   ├── Módulo 1: Estado Global da Aplicação                             │
 │   ├── Módulo 2: Cache de Elementos do DOM                              │
-│   ├── Módulo 3: Matemática Geográfica (DMS → DD, Ângulo Normalizado)   │
-│   ├── Módulo 4: Gerenciamento da Fila & Prevenção de Memory Leak       │
+│   ├── Módulo 3: Utilitários e Matemática Geográfica (DMS → DD)         │
+│   ├── Módulo 4: Gerenciamento da Fila de Imagens                       │
 │   ├── Módulo 5: Extrator Unificado EXIF + XMP DJI                      │
-│   ├── Módulo 6: Motor Vetorial de Bússola 2D (Trigonometria Polar)     │
-│   ├── Módulo 7: Presets Visuais (Dark Pro, Light Clean, Segurança)     │
-│   ├── Módulo 8: Compositor Gráfico de Alta Fidelidade                  │
-│   ├── Módulo 9: Motor de Navegação no Viewport (Zoom/Pan)              │
-│   └── Módulo 10: Processador em Lote Assíncrono com Compressão ZIP     │
+│   ├── Módulo 6: Carregamento da Imagem Ativa                           │
+│   ├── Módulo 7: Presets Visuais e Sincronização dos Controles          │
+│   ├── Módulo 8: Motor Vetorial de Bússola 2D                           │
+│   ├── Módulo 9: Compositor Gráfico da Estampa                          │
+│   ├── Módulo 10: Navegação no Viewport (Zoom/Pan)                      │
+│   ├── Módulo 11: Drag & Drop e Ingestão de Arquivos                    │
+│   └── Módulo 12: Exportação Individual e em Lote (ZIP)                 │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -98,8 +100,8 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 - **Nenhum** servidor local, Node.js, Python ou conexão de internet é necessário.
 
 ### Como Abrir
-1. Navegue até a pasta do projeto: `d:\Exif_Studio`.
-2. Dê um duplo clique no arquivo [`geotag_exif_studio.html`](file:///d:/Exif_Studio/geotag_exif_studio.html).
+1. Baixe ou clone este repositório (ou apenas o arquivo `geotag_exif_studio.html`).
+2. Dê um duplo clique no arquivo [`geotag_exif_studio.html`](geotag_exif_studio.html).
 3. O aplicativo abrirá instantaneamente pronto para uso.
 
 ---
@@ -111,6 +113,8 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 - **Selecionar Pasta:** Carrega recursivamente todas as fotos contidas em um diretório do computador.
 - **Arrastar e Soltar (Drag & Drop):** Arraste uma seleção de imagens diretamente sobre a janela do aplicativo.
 - **Limpar Fila:** Esvazia a lista, libera a memória RAM dos objetos em cache e reseta os seletores.
+- **Duplicados:** Fotos com o mesmo caminho, tamanho e data de modificação são ignoradas. Arquivos de mesmo nome em subpastas diferentes (ex: `DJI_0001.JPG` de voos distintos) são mantidos.
+- Durante o processamento em lote a fila fica bloqueada (não é possível adicionar, remover ou limpar fotos).
 
 ### 5.2 Bússola Gráfica Vetorial
 - **Exibir Bússola:** Ativa ou oculta a bússola vetorial na imagem.
@@ -126,10 +130,11 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 
 ### 5.3 Conteúdo e Telemetria Estampada
 - **Texto Superior:** Campo livre para nome de projeto, cliente, número do lote ou tipo de vistoria (ex: `Vistoria Técnica • Obra 12`).
-- **Modelo do Drone:** Preenchido automaticamente com base nas tags da câmera/drone, ou editável conforme a necessidade.
+- **Modelo do Drone:** Em modo automático, cada foto recebe o equipamento indicado no seu próprio EXIF (lotes com drones diferentes ficam corretos). Ao digitar um texto, ele passa a ser usado em todas as fotos; apagar o campo volta ao modo automático.
+- **Altitude Estampada:** Escolha entre a altitude absoluta (EXIF GPS ou `AbsoluteAltitude` da DJI) e a altura relativa à decolagem (`RelativeAltitude` da DJI, estampada como `ALT REL`). Se a foto não tiver altura relativa, a absoluta é usada.
 - **Toggles de Informação:** Marque ou desmarque a exibição de:
   - Coordenadas GPS (Latitude e Longitude em graus decimais com 6 dígitos de precisão).
-  - Altitude técnica (em metros).
+  - Altitude em metros (exibida junto às coordenadas GPS).
   - Azimute no texto (direção angular da tomada).
   - Identificação do equipamento.
   - Data e hora do disparo da foto.
@@ -152,7 +157,9 @@ Três presets profissionais estão disponíveis com um clique:
 
 ### 5.7 Exportação e Empacotamento ZIP
 - **Baixar Imagem Atual (JPEG):** Renderiza e salva imediatamente a foto selecionada com qualidade de 95%.
-- **Processar e Baixar Todas (ZIP):** Inicia a fila automatizada. A barra de progresso exibe a foto atual e a porcentagem concluída. Ao finalizar, o arquivo compactado `geotag_batch_[timestamp].zip` é descarregado automaticamente.
+- **Processar e Baixar Todas (ZIP):** Inicia a fila automatizada. A barra de progresso exibe a foto atual e a porcentagem concluída. Ao finalizar, o arquivo compactado `geotag_batch_[timestamp].zip` é descarregado automaticamente, com a mesma qualidade JPEG (95%) do download individual.
+  - As subpastas de origem são preservadas dentro do ZIP e nomes repetidos recebem sufixo numérico (`geotag_DJI_0001_2.JPG`), sem sobrescrever arquivos.
+  - Fotos que não puderem ser processadas são ignoradas sem interromper o lote e informadas ao final.
 - **Cancelar Processamento:** Permite interromper o processamento em lote a qualquer momento de forma segura.
 
 ---
@@ -163,6 +170,10 @@ Três presets profissionais estão disponíveis com um clique:
 As coordenadas brutas sexagesimais (Graus, Minutos e Segundos) são convertidas para graus decimais através da fórmula matemática:
 $$\text{DD} = \text{Graus} + \frac{\text{Minutos}}{60} + \frac{\text{Segundos}}{3600}$$
 *(Aplicando sinal negativo se o hemisfério for Sul `S` ou Oeste `W`)*.
+
+### Altitude
+- **Absoluta:** `GPSAltitude` do EXIF, negativa quando `GPSAltitudeRef = 1` (abaixo do nível do mar). Na ausência dela, usa-se `drone-dji:AbsoluteAltitude` do XMP. A referência vertical depende do equipamento; a DJI não garante altitude ortométrica.
+- **Relativa:** `drone-dji:RelativeAltitude`, altura de voo em relação ao ponto de decolagem. Selecionável no card 3 e estampada como `ALT REL`.
 
 ### Cascata de Extração de Azimute
 Para garantir que a orientação magnética seja detectada com a máxima fidelidade, o aplicativo implementa uma cadeia de prioridade em cascata:
@@ -198,7 +209,13 @@ A largura da agulha magnética é calculada aplicando o vetor ortogonal $(-\sin\
 Processar dezenas ou centenas de fotografias de 20 a 50 Megapixels pode saturar rapidamente a memória RAM do navegador se os recursos não forem reciclados:
 * **Object URLs Efêmeros:** Cada imagem carregada para o processador é instanciada via `URL.createObjectURL(file)` e imediatamente descartada com `URL.revokeObjectURL(url)` assim que o Blob é inserido no arquivo ZIP.
 * **Canvas Offscreen Reutilizável:** Durante o lote, um único elemento Canvas oculto é reaproveitado para todas as renderizações, evitando vazamento de contexto WebGL/2D.
-* **Compressão DEFLATE Otimizada:** O JSZip é configurado com compressão de nível 6, equilibrando velocidade de CPU e taxa de compactação.
+* **Leitura Parcial de Metadados:** Os blocos EXIF e XMP são procurados nos primeiros 256 KB de cada arquivo; a foto inteira só é lida para metadados se nada for encontrado nesse trecho. A leitura tem tempo limite, de modo que um arquivo corrompido não trava a fila.
+* **Compressão DEFLATE:** O JSZip é configurado com compressão de nível 6.
+
+### Limitações Conhecidas
+* Os JPEGs exportados são gerados pelo Canvas e **não carregam os metadados originais** (EXIF/GPS/XMP).
+* O ZIP é montado inteiramente em memória antes do download; lotes muito grandes podem exceder a RAM disponível no navegador.
+* A bússola indica a direção da câmera (o ponteiro vermelho aponta para o azimute da tomada), e não o Norte relativo à imagem.
 
 ---
 
