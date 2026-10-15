@@ -1,7 +1,14 @@
 # Geotag & EXIF Studio — Versão 2.0
 
+[![Versão](https://img.shields.io/github/v/release/KuriakinToscan/Geotag_Studio?label=vers%C3%A3o&color=15306e)](https://github.com/KuriakinToscan/Geotag_Studio/releases/latest)
+[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-0093dd)](LICENSE)
+![100% offline](https://img.shields.io/badge/100%25-offline-1b4a8f)
+
 > **Estampa de telemetria, bússola vetorial e processamento em lote para fotos aéreas e de campo.**
 > Arquivo único • 100% offline • Processamento local • EXIF padrão e XMP da DJI • Metadados preservados na exportação.
+
+### ⬇️ [Baixar a versão mais recente](https://github.com/KuriakinToscan/Geotag_Studio/releases/latest)
+Na página da versão, baixe o arquivo **`geotag_exif_studio.html`** em *Assets* e abra com duplo clique. Não precisa instalar nada.
 
 ---
 
@@ -59,8 +66,9 @@ Todo o aplicativo está em um único arquivo, [`geotag_exif_studio.html`](geotag
 - A gravação direta em pasta (seção 4.7) está disponível no Chrome e no Edge.
 
 ### Como abrir
-1. Baixe o arquivo [`geotag_exif_studio.html`](geotag_exif_studio.html) (ou clone o repositório).
+1. Baixe o arquivo `geotag_exif_studio.html` na [página da versão mais recente](https://github.com/KuriakinToscan/Geotag_Studio/releases/latest) (em *Assets*), ou direto do repositório: [`geotag_exif_studio.html`](geotag_exif_studio.html).
 2. Dê um duplo clique no arquivo. O aplicativo abre pronto para uso.
+3. Na dúvida, clique em **Ajuda** no canto superior direito (ou pressione `F1`).
 
 ---
 
@@ -242,7 +250,7 @@ geotag_exif_studio.html
 ---
 
 ## 9. Histórico de Versões
-As mudanças de cada versão estão em [`CHANGELOG.md`](CHANGELOG.md).
+As mudanças de cada versão estão em [`CHANGELOG.md`](CHANGELOG.md) e as versões publicadas, com o arquivo para download, em [Releases](https://github.com/KuriakinToscan/Geotag_Studio/releases).
 
 ---
 
