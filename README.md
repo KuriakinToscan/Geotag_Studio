@@ -38,6 +38,10 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
   Nenhum byte de imagem ou metadado trafega pela internet. Todas as operações de leitura binária, decodificação, renderização gráfica e compressão ocorrem localmente no navegador via memória RAM.
 * 🧭 **Bússola Gráfica Vetorial Integrada:**
   Renderização procedural em Canvas 2D da orientação azimutal da câmera com agulha magnética bicolor (Norte em vermelho internacional e Sul em branco neutro), mostrador graduado, pontos cardeais em português (`N`, `L`, `S`, `O`) e selo numérico de graus.
+* 🧭 **Seta Norte ou Rumo da Câmera:**
+  Em fotos verticais (vistas de cima) a bússola gira para indicar onde está o Norte real dentro da imagem; em fotos oblíquas ou de solo o ponteiro indica a direção da tomada. No modo automático a escolha é feita pela inclinação do gimbal DJI (`GimbalPitchDegree`).
+* 🗂️ **Metadados Preservados na Exportação:**
+  Os JPEGs exportados mantêm o EXIF original (GPS, data, câmera) e o pacote XMP da DJI, podendo ser reimportados em SIG, Google Earth ou softwares de fotogrametria.
 * 📍 **Posicionamento em 6 Quadrantes:**
   Liberdade total para posicionar a bússola em qualquer canto ou centro da fotografia: *Superior Esquerda*, *Superior Centro*, *Superior Direita*, *Inferior Esquerda*, *Inferior Centro* ou *Inferior Direita*.
 * 🛰️ **Suporte Avançado a Drones DJI (EXIF + XMP):**
@@ -119,6 +123,10 @@ A aplicação opera sob o paradigma **Single-File Autonomous** (arquivo único e
 ### 5.2 Bússola Gráfica Vetorial
 - **Exibir Bússola:** Ativa ou oculta a bússola vetorial na imagem.
 - **Mostrar Ângulo (°):** Adiciona uma etiqueta abaixo da bússola com a indicação precisa do azimute e rumo (ex: `142° SE`).
+- **Modo da Bússola:**
+  - *Automático* (padrão): usa a Seta Norte quando a foto DJI foi tirada com o gimbal apontado para baixo (`GimbalPitchDegree` ≤ -80°) e o Rumo da Câmera nos demais casos.
+  - *Seta Norte*: para fotos vistas de cima, cujo topo aponta para o rumo da tomada. A rosa dos ventos gira e a ponta vermelha indica o Norte real na imagem (ex: rumo 90° → Norte à esquerda).
+  - *Rumo da Câmera*: o "N" fica fixo no topo do mostrador e a ponta vermelha indica o azimute para onde a câmera apontava.
 - **Posição:** Escolha entre os 6 quadrantes:
   - *Superior Esquerda*
   - *Superior Centro*
@@ -160,6 +168,7 @@ Três presets profissionais estão disponíveis com um clique:
 - **Processar e Baixar Todas (ZIP):** Inicia a fila automatizada. A barra de progresso exibe a foto atual e a porcentagem concluída. Ao finalizar, o arquivo compactado `geotag_batch_[timestamp].zip` é descarregado automaticamente, com a mesma qualidade JPEG (95%) do download individual.
   - As subpastas de origem são preservadas dentro do ZIP e nomes repetidos recebem sufixo numérico (`geotag_DJI_0001_2.JPG`), sem sobrescrever arquivos.
   - Fotos que não puderem ser processadas são ignoradas sem interromper o lote e informadas ao final.
+- **Preservar metadados originais (EXIF/GPS/XMP):** Ativado por padrão. Copia os blocos EXIF e XMP da foto original para o JPEG exportado. A tag `Orientation` é ajustada para 1 (a rotação já está aplicada nos pixels) e a miniatura EXIF antiga, sem a estampa, deixa de ser referenciada.
 - **Cancelar Processamento:** Permite interromper o processamento em lote a qualquer momento de forma segura.
 
 ---
@@ -181,6 +190,9 @@ Para garantir que a orientação magnética seja detectada com a máxima fidelid
 2. **`GPSImgDirection`** (Tag EXIF padrão): Direção de mira da câmera.
 3. **`drone-dji:FlightYawDegree`** (Pacote XMP): Rumo da proa da aeronave.
 4. **`GPSTrack` / `GPSDestBearing`** (Tags EXIF): Rumo de trajetória do GPS.
+
+### Inclinação do Gimbal
+`drone-dji:GimbalPitchDegree` indica a inclinação da câmera: -90° é a câmera apontada para baixo. Valores ≤ -80° caracterizam foto vertical, usada pelo modo automático da bússola.
 
 ### Mapeamento dos 8 Rumos Cardeais em Português
 O ângulo normalizado $\theta \in [0^\circ, 360^\circ)$ é mapeado no setor correspondente:
@@ -213,9 +225,8 @@ Processar dezenas ou centenas de fotografias de 20 a 50 Megapixels pode saturar 
 * **Compressão DEFLATE:** O JSZip é configurado com compressão de nível 6.
 
 ### Limitações Conhecidas
-* Os JPEGs exportados são gerados pelo Canvas e **não carregam os metadados originais** (EXIF/GPS/XMP).
 * O ZIP é montado inteiramente em memória antes do download; lotes muito grandes podem exceder a RAM disponível no navegador.
-* A bússola indica a direção da câmera (o ponteiro vermelho aponta para o azimute da tomada), e não o Norte relativo à imagem.
+* Perfis de cor ICC da foto original não são copiados (o Canvas exporta em sRGB).
 
 ---
 

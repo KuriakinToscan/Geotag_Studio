@@ -1059,6 +1059,10 @@
                             <span id="exif-heading-source" class="telemetry-val" style="color:var(--primary); font-size:10px;">N/D</span>
                         </div>
                         <div class="telemetry-row">
+                            <span class="telemetry-label">Inclinação do Gimbal:</span>
+                            <span id="exif-gimbal-pitch" class="telemetry-val">N/D</span>
+                        </div>
+                        <div class="telemetry-row">
                             <span class="telemetry-label">Data e Hora:</span>
                             <span id="exif-date" class="telemetry-val">N/D</span>
                         </div>
@@ -1103,6 +1107,16 @@
                             <option value="bottom-left">Inferior Esquerda</option>
                             <option value="bottom-center">Inferior Centro</option>
                             <option value="bottom-right">Inferior Direita</option>
+                        </select>
+                    </div>
+
+                    <!-- Modo de leitura da bússola: Seta Norte (foto vista de cima) ou Rumo da Câmera -->
+                    <div class="form-group">
+                        <label class="form-label" for="compass-mode">Modo da Bússola</label>
+                        <select id="compass-mode" class="form-control">
+                            <option value="auto" selected>Automático (Seta Norte em fotos verticais DJI)</option>
+                            <option value="north">Seta Norte (foto vista de cima)</option>
+                            <option value="heading">Rumo da Câmera (ponteiro indica a direção da foto)</option>
                         </select>
                     </div>
 
@@ -1328,6 +1342,12 @@
                     </div>
                 </div>
 
+                <!-- Cópia dos metadados originais (EXIF/GPS e XMP) para os JPEGs exportados -->
+                <label class="checkbox-label" title="Copia GPS, data, câmera e dados DJI da foto original para o arquivo exportado">
+                    <input id="preserve-metadata-check" type="checkbox" checked>
+                    <span>Preservar metadados originais (EXIF/GPS/XMP)</span>
+                </label>
+
                 <!-- Botão de Processamento em Lote com Exportação ZIP -->
                 <button id="process-batch-btn" type="button" class="btn-primary" disabled>
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1469,6 +1489,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             /** @type {HTMLImageElement|null} Elemento de imagem carregado na memória RAM para renderização */
             let currentLoadedImage = null;
 
+            /** @type {File|null} Arquivo de origem da imagem exibida (fonte do nome e dos metadados exportados) */
+            let activeFile = null;
+
             /** @type {string|null} URL temporário de blob (Object URL) da foto atual para liberar RAM */
             let currentObjectUrl = null;
 
@@ -1536,6 +1559,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             const showCompassCheck = document.getElementById('show-compass-check');
             const showCompassLabelCheck = document.getElementById('show-compass-label-check');
             const compassPositionSelect = document.getElementById('compass-position');
+            const compassModeSelect = document.getElementById('compass-mode');
             const compassSizeInput = document.getElementById('compass-size');
             const compassSizeValSpan = document.getElementById('compass-size-val');
             const compassOpacityInput = document.getElementById('compass-opacity');
@@ -1565,6 +1589,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
             // Botões de Ação e Lote
             const processBatchBtn = document.getElementById('process-batch-btn');
+            const preserveMetadataCheck = document.getElementById('preserve-metadata-check');
             const downloadCurrentBtn = document.getElementById('download-current-btn');
             const cancelBatchBtn = document.getElementById('cancel-batch-btn');
             const batchProgressBox = document.getElementById('batch-progress-box');
@@ -1584,6 +1609,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             const exifRelAltDisplay = document.getElementById('exif-rel-alt');
             const exifAltHeadingDisplay = document.getElementById('exif-alt-heading');
             const exifHeadingSourceDisplay = document.getElementById('exif-heading-source');
+            const exifGimbalPitchDisplay = document.getElementById('exif-gimbal-pitch');
             const exifDateDisplay = document.getElementById('exif-date');
             const exifCameraDisplay = document.getElementById('exif-camera');
 
@@ -1981,6 +2007,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                     currentObjectUrl = null;
                 }
                 currentLoadedImage = null;
+                activeFile = null;
                 activeExif = null;
                 renderIndicator.style.display = 'none';
             }
@@ -2028,6 +2055,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 exifRelAltDisplay.textContent = 'N/D';
                 exifAltHeadingDisplay.textContent = 'N/D';
                 exifHeadingSourceDisplay.textContent = 'N/D';
+                exifGimbalPitchDisplay.textContent = 'N/D';
                 exifDateDisplay.textContent = 'N/D';
                 exifCameraDisplay.textContent = 'N/D';
             }
@@ -2132,6 +2160,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 // Prioridade 2 e 3: Inspeção dos Blocos XMP Embutidos (Drones DJI)
                 let xmpAlt = null;
                 let relAlt = null;
+                let gimbalPitch = null;
                 try {
                     // Lê o trecho inicial da imagem para localizar o pacote XML de XMP
                     const slice = file.slice(0, METADATA_SLICE_BYTES);
@@ -2145,6 +2174,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                         const absAlt = extractXmpNumber(text, ['AbsoluteAltitude']);
                         // RelativeAltitude é a altura de voo em relação ao ponto de decolagem
                         relAlt = extractXmpNumber(text, ['RelativeAltitude']);
+                        // GimbalPitchDegree próximo de -90° indica câmera apontada para baixo (foto vertical)
+                        gimbalPitch = extractXmpNumber(text, ['GimbalPitchDegree']);
 
                         if (gimbalYaw !== null) {
                             heading = normAngle(gimbalYaw);
@@ -2186,7 +2217,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                     make: make,
                     model: model,
                     heading: heading,
-                    headingSource: headingSource
+                    headingSource: headingSource,
+                    gimbalPitch: gimbalPitch
                 };
             }
 
@@ -2249,6 +2281,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
                 currentObjectUrl = url;
                 currentLoadedImage = img;
+                activeFile = file;
                 activeExif = exif;
 
                 // Atualiza o painel de telemetria na barra lateral
@@ -2276,6 +2309,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 } else {
                     exifAltHeadingDisplay.textContent = 'Sem Azimute';
                     exifHeadingSourceDisplay.textContent = 'Nenhum';
+                }
+
+                if (activeExif.gimbalPitch !== null && !isNaN(activeExif.gimbalPitch)) {
+                    exifGimbalPitchDisplay.textContent = activeExif.gimbalPitch.toFixed(1) + '°' +
+                        (isNadir(activeExif) ? ' (vertical)' : ' (oblíqua)');
+                } else {
+                    exifGimbalPitchDisplay.textContent = 'Sem dado';
                 }
 
                 exifDateDisplay.textContent = activeExif.dateTime || 'Sem Data';
@@ -2346,7 +2386,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 customTextInput, droneModelInput, showGpsCheck, showDroneCheck, showHeadingCheck, showDateCheck,
                 textPositionSelect, altitudeSourceSelect, logoPositionSelect, textColorInput, bgColorInput, fontScaleInput,
                 textOpacityInput, textBgOpacityInput, logoBgOpacityInput, logoScaleInput, bgBannerCheck,
-                showCompassCheck, showCompassLabelCheck, compassPositionSelect, compassSizeInput, compassOpacityInput
+                showCompassCheck, showCompassLabelCheck, compassPositionSelect, compassModeSelect, compassSizeInput, compassOpacityInput
             ];
 
             /**
@@ -2425,6 +2465,33 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              * ====================================================================
              */
 
+            /** Inclinação do gimbal a partir da qual a foto é considerada vertical (vista de cima) */
+            const NADIR_PITCH_THRESHOLD = -80;
+
+            /**
+             * Indica se a foto foi tirada com a câmera apontada para baixo (GimbalPitchDegree DJI).
+             * @param {Object|null} exif Metadados extraídos
+             * @returns {boolean}
+             */
+            function isNadir(exif) {
+                return !!exif && exif.gimbalPitch !== null && exif.gimbalPitch !== undefined &&
+                    !isNaN(exif.gimbalPitch) && exif.gimbalPitch <= NADIR_PITCH_THRESHOLD;
+            }
+
+            /**
+             * Define o modo de leitura da bússola para uma foto.
+             * No modo automático, fotos verticais (gimbal ≤ -80°) usam a Seta Norte; as demais,
+             * ou sem informação de gimbal, usam o Rumo da Câmera.
+             *
+             * @param {Object|null} exif Metadados extraídos
+             * @returns {'north'|'heading'}
+             */
+            function resolveCompassMode(exif) {
+                const choice = compassModeSelect.value;
+                if (choice === 'north' || choice === 'heading') return choice;
+                return isNadir(exif) ? 'north' : 'heading';
+            }
+
             /**
              * Desenha a bússola gráfica vetorial de alta definição diretamente no Canvas 2D.
              * 
@@ -2439,10 +2506,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
              * @param {CanvasRenderingContext2D} ctx Contexto de renderização 2D
              * @param {number} w Largura em pixels da imagem
              * @param {number} h Altura em pixels da imagem
-             * @param {number|null} direction Ângulo de azimute em graus decimais
+             * MODOS DE LEITURA:
+             * - Seta Norte ('north'): para fotos vistas de cima, em que o topo da imagem aponta para o
+             *   rumo da tomada. A rosa dos ventos gira -rumo, de modo que o "N" e a ponta vermelha
+             *   indicam onde está o Norte real dentro da foto (ex: rumo 90° → Norte à esquerda).
+             * - Rumo da Câmera ('heading'): o "N" fica fixo no topo do mostrador e a ponta vermelha
+             *   indica o azimute para onde a câmera apontava (útil em fotos oblíquas e de solo).
+             * 
+             * @param {Object} exif Metadados extraídos (usa heading e gimbalPitch)
              */
-            function drawCompassVector(ctx, w, h, direction) {
+            function drawCompassVector(ctx, w, h, exif) {
+                const direction = exif ? exif.heading : null;
                 if (direction === null || isNaN(direction) || !showCompassCheck.checked) return;
+                const mode = resolveCompassMode(exif);
 
                 // Calcula o raio da bússola proporcionalmente à menor dimensão da foto
                 const sizePercent = parseFloat(compassSizeInput.value) / 100;
@@ -2493,15 +2569,27 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 ctx.globalAlpha = 0.95;
                 ctx.stroke();
 
-                // 2. Mira em Cruz Suave Central
+                // Rotação da rosa dos ventos e azimute (a partir do topo da imagem) da ponta vermelha
+                const roseRotation = mode === 'north' ? -direction : 0;
+                const needleAzimuth = mode === 'north' ? -direction : direction;
+
+                /** Converte um azimute (0° = topo, sentido horário) e distância do centro em coordenadas */
+                const polar = (azDeg, dist) => {
+                    const a = azDeg * Math.PI / 180;
+                    return [cx + Math.sin(a) * dist, cy - Math.cos(a) * dist];
+                };
+
+                // 2. Mira em Cruz Suave Central (acompanha a rotação da rosa)
                 ctx.beginPath();
                 ctx.strokeStyle = textColor;
                 ctx.globalAlpha = 0.35;
                 ctx.lineWidth = Math.max(1, size * 0.012);
-                ctx.moveTo(cx, cy - radius * 0.62);
-                ctx.lineTo(cx, cy + radius * 0.62);
-                ctx.moveTo(cx - radius * 0.62, cy);
-                ctx.lineTo(cx + radius * 0.62, cy);
+                [0, 90].forEach(base => {
+                    const [x1, y1] = polar(base + roseRotation, radius * 0.62);
+                    const [x2, y2] = polar(base + roseRotation + 180, radius * 0.62);
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                });
                 ctx.stroke();
 
                 // 3. Marcações dos 4 Pontos Cardeais em Português (N, S, L, O)
@@ -2511,13 +2599,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 ctx.textBaseline = 'middle';
                 ctx.font = 'bold ' + Math.round(size * 0.13) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
-                ctx.fillText('N', cx, cy - radius * 0.77);
-                ctx.fillText('S', cx, cy + radius * 0.77);
-                ctx.fillText('L', cx + radius * 0.77, cy);
-                ctx.fillText('O', cx - radius * 0.77, cy);
+                [['N', 0], ['L', 90], ['S', 180], ['O', 270]].forEach(([letter, base]) => {
+                    const [lx, ly] = polar(base + roseRotation, radius * 0.77);
+                    ctx.fillText(letter, lx, ly);
+                });
 
-                // 4. Agulha Magnética da Bússola
-                const angleRad = (normAngle(direction) - 90) * (Math.PI / 180);
+                // 4. Agulha Magnética da Bússola (ponta vermelha conforme o modo de leitura)
+                const angleRad = (normAngle(needleAzimuth) - 90) * (Math.PI / 180);
                 const side = Math.max(4, size * 0.065);
                 const px = -Math.sin(angleRad);
                 const py = Math.cos(angleRad);
@@ -2801,7 +2889,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
                 // Renderiza a Bússola Gráfica Vetorial de Azimute
                 if (exif && exif.heading !== null) {
-                    drawCompassVector(ctx, w, h, exif.heading);
+                    drawCompassVector(ctx, w, h, exif);
                 }
             }
 
@@ -2931,6 +3019,126 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 });
             }
 
+            /** Quantidade máxima de bytes do início do arquivo examinada à procura dos blocos de metadados */
+            const METADATA_SCAN_BYTES = 1048576;
+
+            /** Assinaturas dos blocos APP1 copiados para a saída: EXIF e XMP */
+            const APP1_EXIF_SIGNATURE = 'Exif\0\0';
+            const APP1_XMP_SIGNATURE = 'http://ns.adobe.com/xap/1.0/\0';
+
+            /**
+             * Verifica se os bytes a partir de uma posição correspondem a uma assinatura ASCII.
+             * @param {Uint8Array} bytes Dados
+             * @param {number} pos Posição inicial
+             * @param {string} signature Assinatura esperada
+             * @returns {boolean}
+             */
+            function bytesStartWith(bytes, pos, signature) {
+                if (pos + signature.length > bytes.length) return false;
+                for (let i = 0; i < signature.length; i++) {
+                    if (bytes[pos + i] !== signature.charCodeAt(i)) return false;
+                }
+                return true;
+            }
+
+            /**
+             * Extrai do JPEG original os segmentos APP1 de EXIF e XMP (marcador, tamanho e conteúdo).
+             * Percorre apenas os cabeçalhos até o início dos dados da imagem (SOS).
+             *
+             * @param {File} file JPEG original
+             * @returns {Promise<Array<Uint8Array>>} Segmentos prontos para inserção
+             */
+            async function readMetadataSegments(file) {
+                const bytes = new Uint8Array(await file.slice(0, METADATA_SCAN_BYTES).arrayBuffer());
+                const segments = [];
+                if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) return segments;
+
+                let pos = 2;
+                while (pos + 4 <= bytes.length) {
+                    if (bytes[pos] !== 0xFF) break;
+                    const marker = bytes[pos + 1];
+                    if (marker === 0xFF) { pos++; continue; }          // Byte de preenchimento
+                    if (marker === 0xDA || marker === 0xD9) break;     // Início dos dados (SOS) ou fim (EOI)
+                    const length = (bytes[pos + 2] << 8) | bytes[pos + 3];
+                    const end = pos + 2 + length;
+                    if (length < 2 || end > bytes.length) break;
+
+                    if (marker === 0xE1) {
+                        if (bytesStartWith(bytes, pos + 4, APP1_EXIF_SIGNATURE)) {
+                            const exif = sanitizeExifSegment(bytes.slice(pos, end));
+                            if (exif) segments.push(exif);
+                        } else if (bytesStartWith(bytes, pos + 4, APP1_XMP_SIGNATURE)) {
+                            segments.push(bytes.slice(pos, end));
+                        }
+                    }
+                    pos = end;
+                }
+                return segments;
+            }
+
+            /**
+             * Ajusta o bloco EXIF copiado para a imagem exportada:
+             * - Orientation (0x0112) passa a 1, pois o navegador já aplica a rotação ao desenhar a
+             *   foto no Canvas; manter o valor original faria visualizadores girarem a imagem de novo.
+             * - O ponteiro para o IFD1 (miniatura embutida) é zerado, para que exploradores de
+             *   arquivos não exibam a miniatura antiga, sem a estampa.
+             * Retorna null se a estrutura não puder ser interpretada com segurança.
+             *
+             * @param {Uint8Array} seg Segmento APP1 EXIF completo (começando em 0xFFE1)
+             * @returns {Uint8Array|null}
+             */
+            function sanitizeExifSegment(seg) {
+                try {
+                    const view = new DataView(seg.buffer, seg.byteOffset, seg.byteLength);
+                    const tiff = 10; // 0xFFE1 (2) + tamanho (2) + 'Exif\0\0' (6)
+                    const order = view.getUint16(tiff);
+                    if (order !== 0x4949 && order !== 0x4D4D) return null;
+                    const le = order === 0x4949;
+
+                    const ifd0 = tiff + view.getUint32(tiff + 4, le);
+                    const count = view.getUint16(ifd0, le);
+                    for (let i = 0; i < count; i++) {
+                        const entry = ifd0 + 2 + i * 12;
+                        if (view.getUint16(entry, le) === 0x0112) {
+                            view.setUint16(entry + 8, 1, le);
+                        }
+                    }
+                    view.setUint32(ifd0 + 2 + count * 12, 0, le);
+                    return seg;
+                } catch (e) {
+                    console.warn('Bloco EXIF ignorado (estrutura inválida):', e);
+                    return null;
+                }
+            }
+
+            /**
+             * Insere os metadados do JPEG original (EXIF/GPS e XMP) no JPEG gerado pelo Canvas.
+             * Os segmentos entram logo após o SOI e o eventual segmento JFIF (APP0).
+             * Em caso de falha, devolve o JPEG sem metadados para não perder a exportação.
+             *
+             * @param {Blob} jpegBlob JPEG gerado pelo Canvas
+             * @param {File} sourceFile JPEG original
+             * @returns {Promise<Blob>}
+             */
+            async function withOriginalMetadata(jpegBlob, sourceFile) {
+                if (!preserveMetadataCheck.checked || !sourceFile) return jpegBlob;
+                try {
+                    const segments = await readMetadataSegments(sourceFile);
+                    if (segments.length === 0) return jpegBlob;
+
+                    const head = new Uint8Array(await jpegBlob.slice(0, 64).arrayBuffer());
+                    if (head[0] !== 0xFF || head[1] !== 0xD8) return jpegBlob;
+                    let insertAt = 2;
+                    if (head[2] === 0xFF && head[3] === 0xE0) {
+                        insertAt = 4 + ((head[4] << 8) | head[5]);
+                    }
+                    return new Blob([jpegBlob.slice(0, insertAt), ...segments, jpegBlob.slice(insertAt)], { type: 'image/jpeg' });
+                } catch (e) {
+                    console.warn('Não foi possível copiar os metadados originais:', e);
+                    return jpegBlob;
+                }
+            }
+
             /**
              * Dispara o download de um Blob com o nome informado.
              * @param {Blob} blob Conteúdo
@@ -3003,10 +3211,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                     renderToCanvas(currentLoadedImage, previewCanvas, activeExif);
                 }
 
-                const origName = batchFiles[activeIndex] ? batchFiles[activeIndex].name : 'imagem';
+                const origName = activeFile ? activeFile.name : 'imagem';
                 const baseName = origName.replace(/\.[^/.]+$/, "");
                 try {
-                    const blob = await canvasToJpegBlob(previewCanvas);
+                    const blob = await withOriginalMetadata(await canvasToJpegBlob(previewCanvas), activeFile);
                     downloadBlob(blob, 'geotag_' + baseName + '.jpg');
                     showToast("Download da imagem atual concluído.");
                 } catch (e) {
@@ -3050,7 +3258,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                             const img = await loadImage(fileUrl);
                             const fileExif = await extractExifAndXmp(file);
                             renderToCanvas(img, tempCanvas, fileExif);
-                            const blob = await canvasToJpegBlob(tempCanvas);
+                            const blob = await withOriginalMetadata(await canvasToJpegBlob(tempCanvas), file);
                             zip.file(uniqueZipPath(file, usedNames), blob);
                             completed++;
                         } catch (e) {
