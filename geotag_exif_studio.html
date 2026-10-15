@@ -57,6 +57,7 @@
         10 Zoom e arrasto do visualizador
         11 Arrastar e soltar arquivos
         12 Exportação (JPEG, metadados, ZIP e pasta)
+        13 Ajuda (guia de uso embutido)
     ================================================================================
     -->
 
@@ -190,6 +191,123 @@
             font-size: 11px;
             color: var(--text-muted);
             margin-top: 1px;
+        }
+
+        /* Botão de ajuda no canto direito do cabeçalho */
+        .help-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--brand-navy);
+            background: var(--primary-light);
+            border: 1px solid var(--primary-border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .help-btn:hover {
+            background: var(--brand-navy);
+            color: #ffffff;
+        }
+
+        /* Janela de ajuda (elemento <dialog> nativo) */
+        .help-dialog {
+            width: min(760px, calc(100vw - 32px));
+            max-height: calc(100vh - 48px);
+            margin: auto;
+            padding: 0;
+            border: none;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .help-dialog::backdrop {
+            background: rgba(11, 26, 58, 0.55);
+        }
+
+        .help-dialog[open] {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .help-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, var(--brand-navy), var(--primary));
+            color: #ffffff;
+        }
+
+        .help-header h2 {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .help-close {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: #ffffff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .help-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .help-body {
+            overflow-y: auto;
+            padding: 16px 20px 20px;
+            font-size: 12.5px;
+            line-height: 1.6;
+        }
+
+        .help-body section + section {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .help-body h3 {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--brand-navy);
+            margin-bottom: 6px;
+        }
+
+        .help-body ul,
+        .help-body ol {
+            padding-left: 20px;
+        }
+
+        .help-body li + li {
+            margin-top: 3px;
+        }
+
+        .help-body kbd {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            padding: 1px 5px;
+            border: 1px solid var(--border-color);
+            border-bottom-width: 2px;
+            border-radius: 4px;
+            background: var(--bg-card);
+        }
+
+        .help-footer {
+            font-size: 11px;
+            color: var(--text-muted);
         }
 
         /* ==========================================================================
@@ -1027,6 +1145,16 @@
                 <p class="brand-sub">Versão 2.0</p>
             </div>
         </div>
+
+        <!-- Botão de ajuda: abre o guia de uso embutido (também com F1) -->
+        <button id="help-btn" type="button" class="help-btn" title="Guia de uso (F1)" aria-haspopup="dialog">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Ajuda</span>
+        </button>
     </header>
 
     <!-- ==========================================================================
@@ -1489,6 +1617,82 @@
         </a>
         <span class="footer-license">MIT License · 2026</span>
     </footer>
+
+    <!-- ==========================================================================
+         JANELA DE AJUDA
+         Guia de uso embutido, disponível sem internet. Abre pelo botão "Ajuda" ou F1.
+         ========================================================================== -->
+    <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
+        <div class="help-header">
+            <h2 id="help-title">Ajuda — Geotag & EXIF Studio 2.0</h2>
+            <button id="help-close" type="button" class="help-close" aria-label="Fechar ajuda">&times;</button>
+        </div>
+        <div class="help-body">
+            <section>
+                <h3>Primeiros passos</h3>
+                <ol>
+                    <li>Carregue fotos JPEG em <strong>1. Carregamento de Imagens</strong>: selecione arquivos, uma pasta inteira ou arraste as fotos para a janela.</li>
+                    <li>Clique em uma foto da fila para visualizá-la. O painel mostra GPS, altitude, azimute, inclinação do gimbal, data/hora e câmera lidos da foto.</li>
+                    <li>Ajuste logotipo, bússola, faixa de texto e estilo nos cards 2 a 5. A pré-visualização é atualizada na hora.</li>
+                    <li>Exporte com <strong>Baixar Imagem Atual</strong> ou processe toda a fila com <strong>Processar e Baixar Todas</strong>.</li>
+                </ol>
+            </section>
+
+            <section>
+                <h3>Painel de controle</h3>
+                <ul>
+                    <li><strong>2. Logotipo:</strong> o logotipo oficial do IBAMA vem como padrão e é reproduzido sem alterações. É possível carregar outro (PNG ou JPG), removê-lo ou restaurar o padrão.</li>
+                    <li><strong>3. Bússola:</strong> posição, tamanho e selo com o ângulo. Só aparece em fotos que têm azimute.</li>
+                    <li><strong>4. Faixa de Texto:</strong> título opcional, equipamento e itens exibidos (GPS, azimute, equipamento, data em DD/MM/AAAA e hora em HH:MM). A altitude pode ser absoluta (ALT) ou relativa à decolagem (ALT REL).</li>
+                    <li><strong>5. Estilo Visual:</strong> presets, cor do texto, tamanho da fonte e o padrão de fundo e transparência.</li>
+                    <li>O campo de equipamento é preenchido com o modelo de cada foto. Se você digitar um texto, ele vale para todas; apague o campo para voltar ao automático.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h3>Modos da bússola</h3>
+                <ul>
+                    <li><strong>Seta Norte:</strong> para fotos vistas de cima. A rosa dos ventos gira e a ponta vermelha mostra onde está o Norte dentro da foto.</li>
+                    <li><strong>Rumo da Câmera:</strong> o "N" fica no topo e a ponta vermelha indica para onde a câmera apontava. Indicado para fotos oblíquas ou de solo.</li>
+                    <li><strong>Automático:</strong> usa a Seta Norte quando o gimbal do drone DJI estava apontado para baixo (-80° ou menos) e o Rumo da Câmera nos demais casos.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h3>Fundo e transparência</h3>
+                <ul>
+                    <li>O bloco <strong>Fundo e Transparência</strong> do card 5 vale para logotipo, bússola e faixa de texto ao mesmo tempo: exibir ou retirar o fundo, cor e opacidade do fundo e opacidade dos elementos.</li>
+                    <li>Para ajustar um elemento separadamente, abra <strong>Aparência</strong> no card dele e marque <strong>Ajuste individual</strong>. <strong>Voltar ao padrão</strong> desfaz o ajuste.</li>
+                    <li>O <strong>Contorno de Legibilidade</strong> desenha um contorno ao redor das letras quando o elemento fica sem fundo, para manter o texto legível sobre a foto.</li>
+                    <li>Os presets alteram apenas o padrão global; ajustes individuais são mantidos.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h3>Exportação</h3>
+                <ul>
+                    <li>As fotos são exportadas em resolução total, em JPEG com qualidade 95%.</li>
+                    <li><strong>Preservar metadados originais</strong> mantém GPS, data, câmera e dados DJI no arquivo exportado, para uso em SIG, Google Earth ou fotogrametria.</li>
+                    <li><strong>Destino do Lote</strong> (Chrome e Edge): baixar um ZIP ou gravar as fotos direto em uma pasta, a opção mais indicada para lotes grandes. Arquivos existentes nunca são sobrescritos.</li>
+                    <li>Lotes acima de 2 GB em ZIP são divididos em partes. Fotos com falha são informadas ao final, sem interromper o lote.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h3>Visualizador e atalhos</h3>
+                <ul>
+                    <li><strong>Roda do mouse:</strong> zoom. <strong>Arrastar com o botão esquerdo:</strong> mover a foto. <strong>Ajustar:</strong> enquadrar a foto na tela.</li>
+                    <li><kbd>F1</kbd> abre esta ajuda e <kbd>Esc</kbd> a fecha.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h3>Privacidade</h3>
+                <p>O aplicativo funciona 100% offline: nenhuma foto ou metadado sai do seu computador. Todo o processamento acontece no navegador.</p>
+                <p class="help-footer">Geotag & EXIF Studio 2.0 · Kuriakin Toscan · MIT License · O logotipo do IBAMA é marca oficial do órgão.</p>
+            </section>
+        </div>
+    </dialog>
 
     <!-- Elemento Flutuante de Feedback ao Usuário (Toast) -->
     <div id="toast" class="toast">Notificação</div>
@@ -3965,6 +4169,37 @@
                 shouldCancelBatch = true;
                 cancelBatchBtn.disabled = true;
                 progressStatusText.textContent = 'Interrompendo lote...';
+            });
+
+            /**
+             * ====================================================================
+             * MÓDULO 13: AJUDA
+             * ====================================================================
+             * Guia de uso embutido em um <dialog> nativo: abre pelo botão "Ajuda" do
+             * cabeçalho ou pela tecla F1; fecha pelo botão ×, pela tecla Esc ou clicando
+             * fora da janela.
+             */
+            const helpBtn = document.getElementById('help-btn');
+            const helpDialog = document.getElementById('help-dialog');
+            const helpCloseBtn = document.getElementById('help-close');
+
+            function openHelp() {
+                if (!helpDialog.open) helpDialog.showModal();
+            }
+
+            helpBtn.addEventListener('click', openHelp);
+            helpCloseBtn.addEventListener('click', () => helpDialog.close());
+
+            // Clique no fundo escurecido (fora da caixa) fecha a ajuda
+            helpDialog.addEventListener('click', (e) => {
+                if (e.target === helpDialog) helpDialog.close();
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'F1') {
+                    e.preventDefault();
+                    openHelp();
+                }
             });
 
         })();

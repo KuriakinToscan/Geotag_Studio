@@ -47,6 +47,7 @@ Todo o aplicativo está em um único arquivo, [`geotag_exif_studio.html`](geotag
 * 🗂️ **Metadados preservados:** os JPEGs exportados mantêm o EXIF (GPS, data, câmera) e o XMP originais, podendo ser reimportados em SIG, Google Earth ou fotogrametria.
 * ⚡ **Processamento em lote:** progresso, cancelamento e relatório de falhas; saída em ZIP (dividido em partes de até 2 GB) ou gravação direta em pasta (Chrome/Edge).
 * 🔍 **Visualizador com zoom e arrasto** (10% a 500%) e pré-visualização leve, com exportação sempre em resolução total.
+* ❓ **Ajuda embutida:** botão **Ajuda** no cabeçalho (ou tecla `F1`) com o guia de uso, disponível sem internet.
 
 ---
 
@@ -65,7 +66,7 @@ Todo o aplicativo está em um único arquivo, [`geotag_exif_studio.html`](geotag
 
 ## 4. Guia de Uso
 
-O painel de controle à esquerda é organizado em cinco cards, na ordem abaixo.
+O painel de controle à esquerda é organizado em cinco cards, na ordem abaixo. O botão **Ajuda**, no canto superior direito (ou a tecla `F1`), abre um resumo deste guia dentro do próprio app; `Esc` fecha a janela.
 
 ### 4.1 Carregamento de Imagens
 - **Selecionar Arquivos:** escolhe um ou mais arquivos `.jpg`/`.jpeg`.
@@ -120,6 +121,7 @@ O painel de controle à esquerda é organizado em cinco cards, na ordem abaixo.
 - **Roda do mouse:** amplia ou reduz.
 - **Arrastar com o botão esquerdo:** navega pela foto.
 - **Barra de ferramentas:** `−`, `+` e **Ajustar** (enquadra a foto na tela).
+- **Atalhos:** `F1` abre a ajuda; `Esc` a fecha.
 
 ### 4.7 Exportação
 - **Baixar Imagem Atual (JPEG):** exporta a foto selecionada em resolução total, qualidade 95%.
@@ -199,9 +201,10 @@ O Canvas gera JPEGs sem metadados. Na exportação, os segmentos APP1 de EXIF e 
 geotag_exif_studio.html
 ├── <head>   Comentário de arquitetura e mapa do código
 ├── <style>  CSS com variáveis de design (paleta azul do IBAMA: #15306E e #0093DD)
-├── <body>   Cabeçalho, painel de controle (cards 1 a 5), visualizador e rodapé
+├── <body>   Cabeçalho (com botão Ajuda), painel de controle (cards 1 a 5),
+│            visualizador, janela de ajuda e rodapé
 ├── <script> EXIF-js 2.3.0 (MIT), embutida e minificada
-└── <script> Aplicação (ES6+), em 12 módulos:
+└── <script> Aplicação (ES6+), em 13 módulos:
      1  Estado global da aplicação
      2  Cache de elementos do DOM
      3  Utilitários e matemática geográfica (DMS → DD, rumos, data/hora)
@@ -214,6 +217,7 @@ geotag_exif_studio.html
      10 Zoom e arrasto do visualizador
      11 Arrastar e soltar arquivos
      12 Exportação: JPEG, cópia de metadados, gerador de ZIP e gravação em pasta
+     13 Ajuda (guia de uso embutido)
 ```
 
 ---

@@ -17,6 +17,7 @@ Versão de reestruturação: correções de confiabilidade, metadados preservado
 - **Gravação do lote direto em pasta** (Chrome/Edge), sem ZIP e sem sobrescrever arquivos.
 - **ZIP dividido em partes** de até 2 GB em lotes grandes.
 - Painel mostra altura relativa e inclinação do gimbal.
+- **Ajuda embutida:** botão **Ajuda** no cabeçalho (ou `F1`) abre o guia de uso dentro do app, sem internet.
 
 ### Melhorias
 - Pré-visualização em resolução reduzida (até 2560 px), subindo até a resolução total ao ampliar; exportação sempre em resolução total.
